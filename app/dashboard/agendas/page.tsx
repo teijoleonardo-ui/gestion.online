@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Mail,
@@ -25,7 +25,7 @@ type Agenda = { id: number; email: string; verified: boolean };
 type InterbankingCuenta = { id: number; cuit: string; nombre: string; activo: boolean };
 type DebinCuenta = { id: number; modalidad: "CBU" | "ALIAS"; dato: string; nombre: string; activo: boolean };
 
-export default function AgendasPage() {
+function AgendasContent() {
   const [agendas, setAgendas] = useState<Agenda[]>([
     { id: 1, email: "facturacion@empresa.com", verified: true },
     { id: 2, email: "pagos@empresa.com", verified: false },
@@ -559,5 +559,13 @@ export default function AgendasPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function AgendasPage() {
+  return (
+    <Suspense fallback={null}>
+      <AgendasContent />
+    </Suspense>
   );
 }
