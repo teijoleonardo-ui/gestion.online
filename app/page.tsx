@@ -28,7 +28,7 @@ export default function Home() {
               Bienvenido
             </h1>
             <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-neutral-400">
-              Ingresa tus credenciales para acceder a tu cuenta
+              Ingresa tus credenciales para acceder a tu cuenta.
             </p>
           </header>
 
