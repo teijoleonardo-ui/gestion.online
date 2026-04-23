@@ -14,3 +14,8 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
+
+# Evitar que otros gestores generen lockfiles paralelos
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
