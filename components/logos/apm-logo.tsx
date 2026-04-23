@@ -1,0 +1,40 @@
+import type { SVGProps } from "react";
+
+export type ApmLogoProps = SVGProps<SVGSVGElement>;
+
+export function ApmLogo({ className, ...props }: ApmLogoProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 277.512 137.542"
+      fill="none"
+      className={className}
+      aria-hidden
+      {...props}
+    >
+
+  <g id="Grupo_21" data-name="Grupo 21" transform="translate(-728.488 -501.458)">
+    <text id="Lifting_Global_Trade" data-name="Lifting Global Trade" transform="translate(777 547)" fill="currentColor" fontSize="25" fontFamily="Calibri"><tspan x="0" y="0">Lifting Global Trade</tspan></text>
+    <text id="TM" transform="translate(973 549)" fill="currentColor" fontSize="6" fontFamily="Constantia"><tspan x="0" y="0">TM</tspan></text>
+    <text id="APM" transform="translate(826 589)" fill="currentColor" fontSize="43" fontFamily="SegoeUI-Bold, Segoe UI" fontWeight="700"><tspan x="0" y="0">APM</tspan></text>
+    <text id="TERMINALS" transform="translate(764 628)" fill="currentColor" fontSize="43" fontFamily="SegoeUI-Bold, Segoe UI" fontWeight="700"><tspan x="0" y="0">TERMINALS</tspan></text>
+    <g id="Grupo_19" data-name="Grupo 19" transform="translate(133.937 -252.884)">
+      <g id="Grupo_20" data-name="Grupo 20" transform="translate(10 -24)">
+        <g id="Trazado_20" data-name="Trazado 20" transform="matrix(0.883, -0.469, 0.469, 0.883, 596.989, 811.968)" fill="currentColor">
+          <path d="M 64.74887084960938 5.182145118713379 L -0.1561695784330368 3.9821937084198 L -0.3886631727218628 1.229978442192078 L 68.00731658935547 -0.9461035132408142 L 64.74887084960938 5.182145118713379 Z" stroke="none"/>
+          <path d="M 67.16072082519531 -0.4189224243164063 L 0.1539154052734375 1.712961673736572 L 0.3040771484375 3.490612030029297 L 64.45140838623047 4.676555156707764 L 67.16072082519531 -0.4189224243164063 M 68.85391235351563 -1.473294734954834 L 65.04633331298828 5.68772554397583 L -0.6164321899414063 4.47376537322998 L -0.9312515258789063 0.7469854354858398 L 68.85391235351563 -1.473294734954834 Z" stroke="none" fill="currentColor"/>
+        </g>
+        <g id="Trazado_21" data-name="Trazado 21" transform="matrix(0.899, -0.438, 0.438, 0.899, 593.355, 821.964)" fill="currentColor">
+          <path d="M 31.97079658508301 4.454588413238525 L -9.375658988952637 2.833300828933716 L -8.604476928710938 1.252141952514648 L 32.89859771728516 1.330097794532776 L 31.97079658508301 4.454588413238525 Z" stroke="none"/>
+          <path d="M -8.29234504699707 1.752730131149292 L -8.590343475341797 2.363716840744019 L 31.60209274291992 3.939752340316772 L 32.22890853881836 1.828841686248779 L -8.29234504699707 1.752730131149292 M -8.916635513305664 0.751554012298584 L 33.56826400756836 0.8313536643981934 L 32.33949279785156 4.969433784484863 L -10.1610050201416 3.302893877029419 L -8.916635513305664 0.751554012298584 Z" stroke="none" fill="currentColor"/>
+        </g>
+        <g id="Trazado_22" data-name="Trazado 22" transform="translate(647 790)" fill="currentColor">
+          <path d="M 0.3571074903011322 10.2277135848999 L -0.3307701349258423 7.273039817810059 L 34.07513809204102 -9.688186645507813 L 34.07513809204102 -2.624904870986938 L 0.3571074903011322 10.2277135848999 Z" stroke="none"/>
+          <path d="M 0.7142082452774048 9.556499481201172 L 33.57513809204102 -2.969409465789795 L 33.57513809204102 -8.884247779846191 L 0.2461620718240738 7.546078681945801 L 0.7142082452774048 9.556499481201172 M -2.83203121398401e-07 10.89892959594727 L -0.9077102541923523 6.999999523162842 L 34.57513809204102 -10.49213027954102 L 34.57513809204102 -2.280400276184082 L -2.83203121398401e-07 10.89892959594727 Z" stroke="none" fill="currentColor"/>
+        </g>
+      </g>
+    </g>
+  </g>
+    </svg>
+  );
+}

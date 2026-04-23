@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="go-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#58B28C"/>
+      <stop offset="1" stop-color="#3F8E6C"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#go-bg)"/>
+  <path
+    d="M170 332
+       C 128 332 96 300 96 260
+       C 96 224 123 194 159 189
+       C 172 148 211 118 256 118
+       C 306 118 348 154 356 201
+       C 392 205 420 235 420 272
+       C 420 305 397 332 365 332
+       Z"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="28"
+    stroke-linejoin="round"
+    stroke-linecap="round"/>
+</svg>
