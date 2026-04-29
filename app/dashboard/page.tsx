@@ -54,7 +54,7 @@ type CarouselSlide = {
 const carouselSlides: CarouselSlide[] = [
   {
     id: 1,
-    tag: "Instructivo",
+    tag: "Instructivos",
     tagIcon: BookOpen,
     title: "¿Cómo operar en la web?",
     description: "Guía paso a paso para consultar BLs, agregar gastos al carrito y generar tu anticipada online.",
@@ -88,13 +88,13 @@ const carouselSlides: CarouselSlide[] = [
   },
   {
     id: 3,
-    tag: "Recursos",
+    tag: "Novedades",
     tagIcon: Zap,
-    title: "Centro de instructivos y guías",
+    title: "Nueva función: Carga de retenciones",
     description:
-      "Material actualizado sobre medios de pago, APM Terminal 4 y operación en la plataforma.",
-    cta: "Ir al centro",
-    ctaHref: "https://www.gestion-online.com.ar/v3/Guias/INSTRUCTIVOS/",
+      "Ahora podés cargar tus certificados arrastrándolos a la web. Esperá la confirmación de APC antes de generar la transacción.",
+    cta: "Explorar",
+    ctaHref: "/dashboard/retenciones",
     accent: "from-violet-500/22 via-purple-500/16 to-fuchsia-600/10",
     iconBg: "bg-violet-500/18",
     iconColor: "text-violet-semantic",
@@ -243,20 +243,23 @@ function InfoCarousel() {
  
         <div className="mt-3">
           <h3 className="text-sm font-bold leading-snug text-foreground">{slide.title}</h3>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+          <p className="mt-1.5 text-xs leading-relaxed text-neutral-800 line-clamp-3 dark:text-muted-foreground">
             {slide.description}
           </p>
- 
+
           {slide.preview && slide.preview.length > 0 && (
             <ul className="mt-2.5 space-y-1">
               {slide.preview.slice(0, 4).map((title) => (
-                <li key={title} className="flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground">
+                <li
+                  key={title}
+                  className="flex items-center gap-1.5 text-[11px] leading-tight text-neutral-700 dark:text-muted-foreground"
+                >
                   <span aria-hidden className={`h-1 w-1 shrink-0 rounded-full ${slide.dot} opacity-70`} />
                   <span className="truncate">{title}</span>
                 </li>
               ))}
               {slide.preview.length > 4 && (
-                <li className="pl-[10px] text-[10px] text-muted-foreground/60">
+                <li className="pl-[10px] text-[10px] text-neutral-600 dark:text-muted-foreground/60">
                   +{slide.preview.length - 4} más
                 </li>
               )}
@@ -501,9 +504,9 @@ export default function DashboardPage() {
                     onClick={() =>
                       router.push(`/dashboard/consulta-bl?contratante=${encodeURIComponent(c.sigla)}`)
                     }
-                    className="group relative flex aspect-square w-full flex-col overflow-hidden rounded-xl border-2 border-subtle bg-card p-2.5 text-center surface-card transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[var(--border-strong)] hover:bg-secondary/40 hover:shadow-md hover:shadow-black/5 dark:border-white/10 dark:hover:border-[var(--border-strong)] dark:hover:bg-secondary/35 dark:hover:shadow-black/25 sm:p-3"
+                    className="group relative flex aspect-square w-full flex-col overflow-hidden rounded-xl border-2 border-subtle bg-card p-2.5 text-center surface-card transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[var(--border-strong)] hover:shadow-md hover:shadow-black/5 dark:border-white/10 dark:hover:border-[var(--border-strong)] dark:hover:bg-secondary/35 dark:hover:shadow-black/25 sm:p-3"
                   >
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-foreground/[0.04] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-foreground/[0.04] to-transparent opacity-0 transition-opacity duration-300 dark:group-hover:opacity-100" />
                     <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 px-0.5 pb-5">
                       <div
                         className={cn(

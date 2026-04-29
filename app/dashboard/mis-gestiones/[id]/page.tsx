@@ -206,30 +206,50 @@ export default function MisGestionesDetallePage() {
                 Recomendaciones para evitar demoras
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-2.5 text-xs text-muted-foreground sm:grid-cols-2">
-              <div className="flex items-start gap-2">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <CardContent className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2 sm:gap-2.5">
+              <div className="flex items-start gap-2.5">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 ring-1 ring-inset ring-blue-600/40 dark:ring-blue-500/35"
+                  aria-hidden
+                >
+                  <Info className="h-3.5 w-3.5 text-blue-700 dark:text-blue-400" />
+                </span>
                 <p>
                   Recordá que la transacción solo podrá ser cobrada utilizando el medio de pago que
                   seleccionaste al momento de registrarla.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <Bell className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <div className="flex items-start gap-2.5">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 ring-1 ring-inset ring-amber-600/40 dark:ring-amber-500/35"
+                  aria-hidden
+                >
+                  <Bell className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
+                </span>
                 <p>
                   Cuando esté en estado &quot;Finalizada&quot;, podés acercarte a APC de lunes a
                   viernes entre las 10:30 y las 16:30 hs para retirar o presentar la documentación.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <div className="flex items-start gap-2.5">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 ring-1 ring-inset ring-indigo-600/40 dark:ring-indigo-500/35"
+                  aria-hidden
+                >
+                  <FileText className="h-3.5 w-3.5 text-indigo-700 dark:text-indigo-400" />
+                </span>
                 <p>
                   Es obligatorio traer la boleta de transacción web impresa para completar el
                   proceso.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <div className="flex items-start gap-2.5">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-600/40 dark:ring-emerald-500/35"
+                  aria-hidden
+                >
+                  <Info className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
+                </span>
                 <p>
                   Si la transacción está &quot;Finalizada&quot;, consultá tus comprobantes abajo.
                   Podés descargarlos en PDF individual o todos juntos en un ZIP.
@@ -286,13 +306,15 @@ export default function MisGestionesDetallePage() {
                 </CardDescription>
               </div>
               <Button
-                variant="secondary"
-                className="h-9 bg-secondary/50"
+                variant="default"
+                className="h-9 gap-2 font-semibold shadow-sm"
+                disabled={rows.length === 0}
                 onClick={() => {
                   // Placeholder: descarga masiva (ZIP) cuando exista API.
                 }}
               >
-                Descargar los comprobantes ({filteredRows.length})
+                <Download className="h-4 w-4 shrink-0" aria-hidden />
+                Descargar todos los comprobantes ({rows.length})
               </Button>
             </div>
           </CardHeader>

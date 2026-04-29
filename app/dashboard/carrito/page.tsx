@@ -926,8 +926,8 @@ export default function CarritoPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5 transition-colors hover:border-emerald-500/50">
-                            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                          <div className="flex items-start gap-2 rounded-lg border border-emerald-600/35 bg-emerald-500/5 p-2.5 transition-colors hover:border-emerald-600/50 dark:border-emerald-500/35 dark:hover:border-emerald-500/50">
+                            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
                             <div className="text-xs sm:text-sm">
                               <p className="font-semibold text-foreground">
                                 {retencionesCheckout.length} retenci

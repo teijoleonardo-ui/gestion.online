@@ -365,8 +365,8 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
           />
           <DialogHeader className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 ring-1 ring-inset ring-emerald-400/30">
-                <HelpCircle className="h-5 w-5 text-emerald-400" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 ring-1 ring-inset ring-emerald-600/45 dark:ring-emerald-500/40">
+                <HelpCircle className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
               </div>
               <div className="text-left">
                 <DialogTitle className="text-base font-bold text-foreground">
@@ -383,9 +383,9 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
         {/* Contenido */}
         <div className="space-y-3 p-6 pt-4">
           {/* Instructivos */}
-          <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-secondary/30 p-4 transition-colors hover:border-emerald-500/20 hover:bg-secondary/50">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-400/20">
-              <BookOpen className="h-4 w-4 text-emerald-400" />
+          <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-secondary/30 p-4 transition-colors hover:border-emerald-600/30 hover:bg-secondary/50 dark:hover:border-emerald-500/25">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-600/40 dark:ring-emerald-500/35">
+              <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Instructivos</p>
@@ -395,7 +395,7 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
                   href={INSTRUCTIVOS_GUIAS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-emerald-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+                  className="font-medium text-emerald-700 underline-offset-2 hover:text-emerald-800 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
                 >
                   instructivos para operar en la web
                 </a>{" "}
@@ -406,9 +406,9 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
           </div>
 
           {/* Medios de pago */}
-          <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-secondary/30 p-4 transition-colors hover:border-blue-500/20 hover:bg-secondary/50">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 ring-1 ring-inset ring-blue-400/20">
-              <CreditCard className="h-4 w-4 text-blue-400" />
+          <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-secondary/30 p-4 transition-colors hover:border-blue-600/30 hover:bg-secondary/50 dark:hover:border-blue-500/25">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 ring-1 ring-inset ring-blue-600/40 dark:ring-blue-500/35">
+              <CreditCard className="h-4 w-4 text-blue-700 dark:text-blue-400" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Medios de Pago</p>
@@ -418,7 +418,7 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
                   href={INSTRUCTIVOS_GUIAS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+                  className="font-medium text-blue-700 underline-offset-2 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   Medios de Pago
                 </a>{" "}
@@ -429,9 +429,9 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
           </div>
 
           {/* Contacto */}
-          <div className="flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 ring-1 ring-inset ring-emerald-400/30">
-              <Mail className="h-4 w-4 text-emerald-400" />
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-700/25 bg-emerald-500/5 p-4 dark:border-emerald-500/30">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 ring-1 ring-inset ring-emerald-600/45 dark:ring-emerald-500/40">
+              <Mail className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
@@ -442,7 +442,7 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
               </p>
               <a
                 href="mailto:recepcion@gestion-online.com.ar"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 transition-colors hover:text-emerald-300"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
               >
                 <Mail className="h-3 w-3" />
                 recepcion@gestion-online.com.ar

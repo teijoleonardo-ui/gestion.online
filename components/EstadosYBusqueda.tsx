@@ -221,14 +221,17 @@ export function EstadosYBusqueda() {
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Info className="h-4 w-4 text-muted-foreground" />
+            <Info className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
             ¿Qué tenés que saber?
           </CardTitle>
           <CardDescription>
             Las retenciones tienen un vencimiento según cada impuesto, y se aplican únicamente sobre gastos y facturas de{" "}
             <span className="font-semibold text-foreground">Agencia</span>, no de Armador. Al llegar al{" "}
             <span className="font-semibold text-foreground">carrito</span>, vas a poder verificar las retenciones que serán incluidas en el pago y que se{" "}
-            <span className="font-semibold text-emerald-400">descuentan del total a pagar</span>.
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+              descuentan del total a pagar
+            </span>
+            .
           </CardDescription>
           <div
             className={cn(

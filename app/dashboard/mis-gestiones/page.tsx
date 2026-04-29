@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ElementType } from "react";
 import Link from "next/link";
 import { Search, Download, Clock, CheckCircle2, XCircle, Filter, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,13 +15,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { mockTransacciones } from "./data";
 
-const estadoConfig: Record<string, { icon: React.ElementType; className: string }> = {
-  Pagado: { icon: CheckCircle2, className: "bg-primary/20 text-primary" },
-  Pendiente: { icon: Clock, className: "bg-chart-3/20 text-chart-3" },
-  Rechazado: { icon: XCircle, className: "bg-destructive/20 text-destructive" },
-  "En proceso": { icon: Clock, className: "bg-chart-2/20 text-chart-2" },
+/** Igual criterio que retenciones (EstadosYBusqueda): borde teñido + hover con tinte del estado. */
+const estadoVisual: Record<
+  string,
+  {
+    icon: ElementType;
+    iconWrap: string;
+    badge: string;
+    cardBorder: string;
+    hoverBg: string;
+    hoverBorder: string;
+    filterBg: string;
+    filterBorder: string;
+  }
+> = {
+  Pagado: {
+    icon: CheckCircle2,
+    iconWrap: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+    badge: "border-transparent bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+    cardBorder: "border-emerald-500/25",
+    hoverBg: "hover:bg-emerald-500/15 dark:hover:bg-emerald-500/10",
+    hoverBorder: "hover:border-emerald-500/45 dark:hover:border-emerald-500/35",
+    filterBg: "bg-emerald-500/[0.22] dark:bg-emerald-500/15",
+    filterBorder: "border-emerald-600 dark:border-emerald-500",
+  },
+  Pendiente: {
+    icon: Clock,
+    iconWrap: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+    badge: "border-transparent bg-amber-500/15 text-amber-900 dark:text-amber-200",
+    cardBorder: "border-amber-500/25",
+    hoverBg: "hover:bg-amber-500/15 dark:hover:bg-amber-500/10",
+    hoverBorder: "hover:border-amber-500/45 dark:hover:border-amber-500/35",
+    filterBg: "bg-amber-500/[0.22] dark:bg-amber-500/15",
+    filterBorder: "border-amber-600 dark:border-amber-500",
+  },
+  "En proceso": {
+    icon: Clock,
+    iconWrap: "bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
+    badge: "border-transparent bg-blue-500/15 text-blue-900 dark:text-blue-200",
+    cardBorder: "border-blue-500/25",
+    hoverBg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/10",
+    hoverBorder: "hover:border-blue-500/45 dark:hover:border-blue-500/35",
+    filterBg: "bg-blue-500/[0.22] dark:bg-blue-500/15",
+    filterBorder: "border-blue-600 dark:border-blue-500",
+  },
+  Rechazado: {
+    icon: XCircle,
+    iconWrap: "bg-rose-500/15 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+    badge: "border-transparent bg-rose-500/15 text-rose-900 dark:text-rose-200",
+    cardBorder: "border-rose-500/25",
+    hoverBg: "hover:bg-rose-500/15 dark:hover:bg-rose-500/10",
+    hoverBorder: "hover:border-rose-500/45 dark:hover:border-rose-500/35",
+    filterBg: "bg-rose-500/[0.22] dark:bg-rose-500/15",
+    filterBorder: "border-rose-600 dark:border-rose-500",
+  },
 };
 
 export default function MisGestionesPage() {
@@ -85,15 +135,19 @@ export default function MisGestionesPage() {
         <div className="grid gap-4 sm:grid-cols-4">
           {["Pagado", "Pendiente", "En proceso", "Rechazado"].map((status) => {
             const count = mockTransacciones.filter((t) => t.estado === status).length;
-            const config = estadoConfig[status];
-            const Icon = config.icon;
+            const cfg = estadoVisual[status];
+            const Icon = cfg.icon;
+            const filtered = statusFilter === status;
             return (
               <Card
                 key={status}
-                className={`border-border bg-card cursor-pointer transition-all hover:border-primary/30 ${
-                  statusFilter === status ? "border-primary" : ""
-                }`}
-                onClick={() => setStatusFilter(statusFilter === status ? "all" : status)}
+                className={cn(
+                  "cursor-pointer border transition-colors duration-200",
+                  filtered ? cn(cfg.filterBg, cfg.filterBorder) : cn("bg-card", cfg.cardBorder),
+                  cfg.hoverBg,
+                  cfg.hoverBorder,
+                )}
+                onClick={() => setStatusFilter(filtered ? "all" : status)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -101,7 +155,12 @@ export default function MisGestionesPage() {
                       <p className="text-sm text-muted-foreground">{status}</p>
                       <p className="text-2xl font-bold text-foreground">{count}</p>
                     </div>
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.className}`}>
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-lg",
+                        cfg.iconWrap,
+                      )}
+                    >
                       <Icon className="h-5 w-5" />
                     </div>
                   </div>
@@ -128,7 +187,7 @@ export default function MisGestionesPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((t) => {
-                  const config = estadoConfig[t.estado];
+                  const cfg = estadoVisual[t.estado];
                   return (
                     <TableRow key={t.id} className="border-border">
                       <TableCell className="font-mono text-sm font-medium text-foreground">
@@ -140,7 +199,7 @@ export default function MisGestionesPage() {
                       <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
                       <TableCell className="text-muted-foreground">{t.medioPago}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className={config.className}>
+                        <Badge variant="secondary" className={cfg.badge}>
                           {t.estado}
                         </Badge>
                       </TableCell>
