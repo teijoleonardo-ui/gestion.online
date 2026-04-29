@@ -219,14 +219,14 @@ if (typeof window !== "undefined" && USE_MOCK) {
     __pushNotification?: (n: Partial<Notification>) => void;
   }).__pushNotification = (n) => {
     if (!mockStore) seedMockStore();
-    mockStore!.unshift({
+    const defaults = {
       id: `n${Date.now()}`,
-      type: "info",
+      type: "info" as const,
       title: "Nuevo movimiento",
       description: "",
       createdAt: new Date().toISOString(),
       read: false,
-      ...(n as Notification),
-    } as Notification);
+    };
+    mockStore!.unshift({ ...defaults, ...(n as Partial<Notification>) } as Notification);
   };
 }

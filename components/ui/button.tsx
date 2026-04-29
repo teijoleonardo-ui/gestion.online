@@ -20,7 +20,13 @@ const buttonVariants = cva(
           'hover:bg-primary/10 hover:text-primary active:scale-[0.98]',
         link: 'text-primary underline-offset-4 hover:underline hover:text-primary/80',
         login:
-          'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold',
+          'rounded-full border-0 font-semibold tracking-wide text-white ' +
+          'bg-[linear-gradient(180deg,#3ecf8e_0%,#10b981_42%,#047857_100%)] ' +
+          'shadow-[0_4px_18px_rgba(4,120,87,0.45),0_0_42px_rgba(16,185,129,0.22)] ' +
+          'hover:brightness-[1.08] hover:shadow-[0_6px_26px_rgba(4,120,87,0.5),0_0_54px_rgba(16,185,129,0.28)] ' +
+          'active:scale-[0.99] ' +
+          'disabled:pointer-events-none disabled:opacity-[0.58] disabled:shadow-none disabled:hover:brightness-100 ' +
+          'focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-black',
         register:
           'bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold',
       },
@@ -28,6 +34,8 @@ const buttonVariants = cva(
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',
         sm: 'h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
         lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+        /** Primary CTA en login / registro / recuperar (evita choque de altura con variant login) */
+        auth: 'h-12 min-h-12 w-full px-6 text-[0.9375rem] gap-2 has-[>svg]:px-5',
         icon: 'size-9',
         'icon-sm': 'size-8',
         'icon-lg': 'size-10',

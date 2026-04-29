@@ -36,6 +36,10 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "_legacy-pages",
+    "components/NavLink.tsx",
+    "components/ui/calendar.lovable.tsx",
+    "components/ui/pagination.lovable.tsx"
   ]
 }

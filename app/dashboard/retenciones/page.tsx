@@ -1,11 +1,10 @@
 "use client";
-
-import { useEffect, useRef, useState } from "react";
+import { EstadosYBusqueda } from "@/components/EstadosYBusqueda";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload,
   FileText,
   CheckCircle2,
-  Clock,
   XCircle,
   ShieldCheck,
   Loader2,
@@ -37,19 +36,20 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CONTRATANTES } from "@/lib/contratantes";
 import {
+  CONTRATANTES_CON_RETENCIONES,
+  TIPOS_PERMITIDOS_POR_CONTRATANTE,
+  tiposRetencionParaContratante,
+} from "@/lib/retencionesContratanteTipos";
+import {
   extractRetencionFromPDF,
   type ExtractedRetencion,
   type TipoRetencionValue,
 } from "@/lib/extractRetencion";
+import { flashSectionSpotlightAfterScroll } from "@/lib/section-spotlight";
 
-// ─── Catálogos ────────────────────────────────────────────────────────────────
-const TIPOS_RETENCION: { value: TipoRetencionValue; label: string }[] = [
-  { value: "iva", label: "IVA" },
-  { value: "ganancias", label: "GANANCIAS" },
-  { value: "ibb_caba", label: "IBB CABA" },
-  { value: "ibb_arba", label: "IBB ARBA" },
-  { value: "suss", label: "SUSS" },
-];
+const CONTRATANTES_RETENCIONES_SELECT = CONTRATANTES.filter((c) =>
+  CONTRATANTES_CON_RETENCIONES.has(c.sigla.toLowerCase()),
+);
 
 // Schema interno del formulario (lo que produce la extracción de pdf.js).
 type ExtractedData = ExtractedRetencion;
@@ -86,46 +86,6 @@ async function registrarRetencion(
   SUBMITTED_NUMEROS.add(numero);
 }
 
-// ─── Vista: Info + estados ────────────────────────────────────────────────────
-const ESTADOS = [
-  {
-    id: "pendiente",
-    label: "Pendientes",
-    icon: Clock,
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/20",
-    desc: "En revisión por nuestro equipo antes de ser aceptadas o rechazadas.",
-  },
-  {
-    id: "confirmada",
-    label: "Confirmadas",
-    icon: CheckCircle2,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-    desc: "Listas para aplicarse al próximo pago. Deben estar vigentes.",
-  },
-  {
-    id: "rechazada",
-    label: "Rechazadas",
-    icon: XCircle,
-    color: "text-rose-400",
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/20",
-    desc: "Difieren con el comprobante cargado. Cuentan con el motivo del rechazo.",
-  },
-  {
-    id: "aplicada",
-    label: "Aplicadas",
-    icon: ShieldCheck,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
-    desc: "Ya fueron incluidas en el pago de una transacción.",
-  },
-] as const;
-
 export default function RetencionesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -150,6 +110,24 @@ export default function RetencionesPage() {
   });
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const tiposOpciones = useMemo(
+    () => tiposRetencionParaContratante(form.contratante),
+    [form.contratante],
+  );
+
+  useEffect(() => {
+    flashSectionSpotlightAfterScroll("retenciones-carga");
+  }, []);
+
+  /** Si el PDF trajo un tipo que el contratante no admite, se limpia el campo. */
+  useEffect(() => {
+    if (!form.contratante || !form.tipo) return;
+    const allowed = TIPOS_PERMITIDOS_POR_CONTRATANTE[form.contratante];
+    if (!allowed?.includes(form.tipo as TipoRetencionValue)) {
+      setForm((prev) => ({ ...prev, tipo: "" }));
+    }
+  }, [form.contratante, form.tipo]);
 
   // Revocar object URLs al desmontar / cambiar archivo
   useEffect(() => {
@@ -208,7 +186,16 @@ export default function RetencionesPage() {
     try {
       const result = await extractRetencionFromPDF(picked);
       if (result.ok) {
-        setForm(result.data);
+        let data = result.data;
+        if (data.contratante && !CONTRATANTES_CON_RETENCIONES.has(data.contratante)) {
+          data = { ...data, contratante: "", tipo: "" };
+        } else if (data.contratante && data.tipo) {
+          const ok = TIPOS_PERMITIDOS_POR_CONTRATANTE[data.contratante]?.includes(
+            data.tipo as TipoRetencionValue,
+          );
+          if (!ok) data = { ...data, tipo: "" };
+        }
+        setForm(data);
         // Mismo criterio que el componente original: si llenó menos de la mitad
         // de los campos clave, avisamos al usuario de que complete el resto.
         if (result.filled < 3) {
@@ -281,9 +268,9 @@ export default function RetencionesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      {/* Scroll en esta columna (no se recorta el comprobante ni el formulario). */}
+      <header className="z-10 shrink-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="flex h-16 items-center px-6">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Retenciones</h1>
@@ -294,26 +281,22 @@ export default function RetencionesPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-6">
         {/* ── Hero ── */}
-        <Card className="border-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10">
-                  <ShieldCheck className="h-6 w-6 text-emerald-400" />
+        <Card id="retenciones-carga" className="gap-0 border-border bg-card py-0">
+          <CardContent className="px-4 py-2 sm:px-4 sm:py-2.5">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+                  <ShieldCheck className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Gestión online
-                  </p>
-                  <h2 className="text-2xl font-bold text-foreground">
-                    Cargá tu retención
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <h2 className="text-xl font-bold leading-tight text-foreground">Cargá tu retención</h2>
+                  <p className="mt-0 text-sm text-muted-foreground">
                     Arrastrá el PDF y verificá la información extraída antes de confirmar.
                   </p>
-                  <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                  <p className="mt-0.5 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
                     <Info className="mt-[1px] h-3 w-3 shrink-0 text-amber-400" />
                     <span>
                       Si incluirás retenciones en el pago, cargalas antes de generar la
@@ -392,51 +375,7 @@ export default function RetencionesPage() {
           </Card>
         )}
 
-        {/* ── Detalle de estados ── */}
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Info className="h-4 w-4 text-muted-foreground" />
-              ¿Qué tenés que saber?
-            </CardTitle>
-            <CardDescription>
-              Las retenciones tienen un vencimiento según cada impuesto, y se aplican únicamente sobre gastos y facturas de <span className="font-semibold text-foreground">Agencia</span>, no de Armador. Al llegar al <span className="font-semibold text-foreground">carrito</span>, vas a poder verificar las retenciones que serán incluidas en el pago y que se <span className="font-semibold text-emerald-400">descuentan del total a pagar</span>.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {ESTADOS.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <div
-                    key={s.id}
-                    className={cn(
-                      "rounded-xl border bg-secondary/20 p-3 transition-colors",
-                      s.border
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-lg",
-                          s.bg
-                        )}
-                      >
-                        <Icon className={cn("h-4 w-4", s.color)} />
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">
-                        {s.label}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                      {s.desc}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <EstadosYBusqueda />
 
         {/* ── Dropzone + Preview  |  Formulario ── */}
         <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -551,8 +490,8 @@ export default function RetencionesPage() {
           </Card>
 
           {/* Columna derecha: formulario */}
-          <Card className="border-border bg-card">
-            <CardHeader>
+          <Card className="h-full min-h-0 border-border bg-card">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 Verificá la información
@@ -616,14 +555,21 @@ export default function RetencionesPage() {
                     <Building2 className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
                     <Select
                       value={form.contratante}
-                      onValueChange={(v) => setForm({ ...form, contratante: v })}
+                      onValueChange={(v) => {
+                        const allowed = TIPOS_PERMITIDOS_POR_CONTRATANTE[v] ?? [];
+                        const keepTipo =
+                          form.tipo && allowed.includes(form.tipo as TipoRetencionValue)
+                            ? form.tipo
+                            : "";
+                        setForm({ ...form, contratante: v, tipo: keepTipo });
+                      }}
                       disabled={!file || extracting || submitting || submitted}
                     >
                       <SelectTrigger id="contratante" className="h-10 bg-secondary/40 pl-10">
                         <SelectValue placeholder="Seleccioná el contratante" />
                       </SelectTrigger>
                       <SelectContent>
-                        {CONTRATANTES.map((c) => (
+                        {CONTRATANTES_RETENCIONES_SELECT.map((c) => (
                           <SelectItem key={c.id} value={c.sigla.toLowerCase()}>
                             {c.nombre}
                           </SelectItem>
@@ -672,13 +618,26 @@ export default function RetencionesPage() {
                       onValueChange={(v) =>
                         setForm({ ...form, tipo: v as TipoRetencionValue })
                       }
-                      disabled={!file || extracting || submitting || submitted}
+                      disabled={
+                        !file ||
+                        extracting ||
+                        submitting ||
+                        submitted ||
+                        !form.contratante ||
+                        tiposOpciones.length === 0
+                      }
                     >
                       <SelectTrigger id="tipo" className="h-10 bg-secondary/40">
-                        <SelectValue placeholder="Seleccionar" />
+                        <SelectValue
+                          placeholder={
+                            form.contratante
+                              ? "Seleccionar"
+                              : "Elegí primero el contratante"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {TIPOS_RETENCION.map((t) => (
+                        {tiposOpciones.map((t) => (
                           <SelectItem key={t.value} value={t.value}>
                             {t.label}
                           </SelectItem>
@@ -691,10 +650,10 @@ export default function RetencionesPage() {
                 {extractionInfo && !error && (
                   <div
                     role="status"
-                    className="flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3"
+                    className="flex items-start gap-3 rounded-xl border border-amber-500/35 bg-amber-500/15 px-4 py-3 dark:border-amber-400/30 dark:bg-amber-500/10"
                   >
-                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
-                    <p className="text-sm font-medium leading-snug text-amber-50">
+                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+                    <p className="text-sm font-medium leading-snug text-amber-950 dark:text-amber-50">
                       {extractionInfo}
                     </p>
                   </div>
@@ -703,10 +662,10 @@ export default function RetencionesPage() {
                 {error && (
                   <div
                     role="alert"
-                    className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3"
+                    className="flex items-start gap-3 rounded-xl border border-rose-500/35 bg-rose-500/15 px-4 py-3 dark:border-rose-400/30 dark:bg-rose-500/10"
                   >
-                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" />
-                    <p className="text-sm font-medium leading-snug text-rose-50">
+                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <p className="text-sm font-medium leading-snug text-rose-950 dark:text-rose-50">
                       {error}
                     </p>
                   </div>
@@ -751,6 +710,7 @@ export default function RetencionesPage() {
               </form>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </div>

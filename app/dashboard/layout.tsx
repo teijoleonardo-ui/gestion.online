@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { DashboardMain } from "@/components/layout/dashboard-main";
 
 export default function DashboardLayout({
   children,
@@ -8,9 +9,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <AppSidebar />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <DashboardMain>{children}</DashboardMain>
     </div>
   );
 }

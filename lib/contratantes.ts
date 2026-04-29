@@ -20,7 +20,7 @@ export const CONTRATANTES: Contratante[] = [
   { id: 5, sigla: "YM", nombre: "Yang Ming Argentina", logoSrc: "/logos/yml.svg" },
   { id: 6, sigla: "APC", nombre: "Administrative Processing Center", logoSrc: "/logos/apc.svg" },
   { id: 7, sigla: "SDC", nombre: "Agencia Marítima Sudocean", logoSrc: "/logos/sdc.svg" },
-  { id: 8, sigla: "AMI", nombre: "Agencia Marítima Internacional", logoSrc: "/logos/ami.png" },
+  { id: 8, sigla: "AMI", nombre: "Reel Shipping (vux)", logoSrc: "/logos/ami.png" },
   { id: 9, sigla: "APM", nombre: "Terminal 4 - APM Terminals", logoSrc: "/logos/apm.svg" },
   { id: 10, sigla: "PIL", nombre: "PIL by AMI", logoSrc: "/logos/pil.png" },
 ];
@@ -45,7 +45,13 @@ export function detectContratante(hay: string): string | null {
     ym: ["yang ming", " ym ", "-ym-", "_ym_", "yml"],
     apc: ["apc", "administrative processing"],
     sdc: ["sdc", "sudocean"],
-    ami: ["ami", "agencia maritima internacional", "agencia marítima internacional"],
+    ami: [
+      "ami",
+      "agencia maritima internacional",
+      "agencia marítima internacional",
+      "reel shipping",
+      "vux",
+    ],
     apm: ["apm", "terminal 4", "apm terminals"],
     pil: ["pil by ami", " pil ", "-pil-", "_pil_", "pil."],
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,6 +21,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CART_ADDED_EVENT } from "@/lib/cart-events";
+import { flashSectionSpotlightAfterScroll } from "@/lib/section-spotlight";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -43,10 +45,14 @@ type MenuItem = {
   icon: LucideIcon;
   /** Si es true, se renderiza como <a target="_blank"> y no marca "activo". */
   external?: boolean;
+  /** Solo Inicio: activo en /dashboard salvo cuando el hash es otra sección (p. ej. carta). */
+  dashboardHome?: boolean;
+  /** Ancla en /dashboard (sin #); scroll suave si ya estás en el dashboard. */
+  anchorId?: string;
 };
 
 const menuItems: MenuItem[] = [
-  { title: "Inicio", url: "/dashboard", icon: Home },
+  { title: "Inicio", url: "/dashboard", icon: Home, dashboardHome: true },
   {
     title: "Instructivos",
     url: "https://www.gestion-online.com.ar/v3/Guias/INSTRUCTIVOS/",
@@ -55,9 +61,9 @@ const menuItems: MenuItem[] = [
   },
   {
     title: "Carta de Garantía",
-    url: "http://www.apconline.com.ar/carta.html",
+    url: "/dashboard#carta-garantia",
     icon: Shield,
-    external: true,
+    anchorId: "carta-garantia",
   },
   { title: "Agendas", url: "/dashboard/agendas", icon: Calendar },
   { title: "Retenciones", url: "/dashboard/retenciones", icon: Receipt },
@@ -71,6 +77,43 @@ const tooltipContentClass =
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const [hash, setHash] = useState("");
+  const [cartHighlight, setCartHighlight] = useState(false);
+
+  useEffect(() => {
+    setHash(typeof window !== "undefined" ? window.location.hash : "");
+  }, [pathname]);
+
+  useEffect(() => {
+    let clearTimer: ReturnType<typeof setTimeout> | undefined;
+    const onCartAdded = () => {
+      setCartHighlight(true);
+      if (clearTimer) clearTimeout(clearTimer);
+      clearTimer = setTimeout(() => setCartHighlight(false), 5000);
+    };
+    window.addEventListener(CART_ADDED_EVENT, onCartAdded);
+    return () => {
+      window.removeEventListener(CART_ADDED_EVENT, onCartAdded);
+      if (clearTimer) clearTimeout(clearTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  const scrollToDashboardAnchor = useCallback((id: string) => {
+    const h = `#${id}`;
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    flashSectionSpotlightAfterScroll(id);
+    const nextUrl = `${window.location.pathname}${window.location.search}${h}`;
+    if (window.location.hash !== h) {
+      window.history.replaceState(null, "", nextUrl);
+      setHash(h);
+    }
+  }, []);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -103,16 +146,30 @@ export function AppSidebar() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-3">
           {menuItems.map((item) => {
-            const isActive =
-              !item.external &&
-              (pathname === item.url ||
-                (item.url !== "/dashboard" && pathname.startsWith(item.url)));
+            const pathOnly = item.url.split("#")[0] ?? item.url;
+            const isActive = (() => {
+              if (item.external) return false;
+              if (item.anchorId) {
+                return pathname === "/dashboard" && hash === `#${item.anchorId}`;
+              }
+              if (item.dashboardHome) {
+                return pathname === "/dashboard" && hash !== "#carta-garantia";
+              }
+              return (
+                pathname === pathOnly ||
+                (pathOnly !== "/dashboard" && pathname.startsWith(pathOnly))
+              );
+            })();
+
+            const isCarrito = item.url === "/dashboard/carrito";
 
             const itemClassName = cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300",
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              /* Mismo aspecto que el hover del ítem cuando no está activo (sin anillo). */
+              cartHighlight && isCarrito && !isActive && "bg-sidebar-accent text-sidebar-foreground",
             );
 
             const itemContent = (
@@ -133,14 +190,29 @@ export function AppSidebar() {
                 {itemContent}
               </a>
             ) : (
-              <Link key={item.url} href={item.url} className={itemClassName}>
+              <Link
+                key={item.url}
+                href={item.url}
+                className={itemClassName}
+                onClick={
+                  item.anchorId && pathname === "/dashboard"
+                    ? (e) => {
+                        e.preventDefault();
+                        scrollToDashboardAnchor(item.anchorId!);
+                      }
+                    : undefined
+                }
+              >
                 {itemContent}
               </Link>
             );
 
             if (collapsed) {
               return (
-                <Tooltip key={item.url}>
+                <Tooltip
+                  key={item.url}
+                  {...(isCarrito && cartHighlight ? { open: true } : {})}
+                >
                   <TooltipTrigger asChild>{NavItem}</TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8} className={tooltipContentClass}>
                     {item.title}

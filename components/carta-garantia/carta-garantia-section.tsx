@@ -117,15 +117,16 @@ export function CartaGarantiaSection() {
                 Consultar
               </Button>
             </div>
-            <a
-              href="http://www.apconline.com.ar/carta.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Download className="h-3 w-3" />
-              Descargar modelo
-            </a>
+            <Button variant="outline" size="sm" className="h-9 gap-2 border-emerald-500/40 bg-emerald-500/5 text-sm font-semibold text-emerald-600 shadow-sm hover:border-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300" asChild>
+              <a
+                href="http://www.apconline.com.ar/carta.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="h-4 w-4 shrink-0" />
+                Descargar modelo
+              </a>
+            </Button>
           </div>
         </div>
 

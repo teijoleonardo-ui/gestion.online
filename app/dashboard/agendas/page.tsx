@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Agenda = { id: number; email: string; verified: boolean };
 type InterbankingCuenta = { id: number; cuit: string; nombre: string; activo: boolean };
@@ -29,6 +30,9 @@ function AgendasContent() {
   const [agendas, setAgendas] = useState<Agenda[]>([
     { id: 1, email: "facturacion@empresa.com", verified: true },
     { id: 2, email: "pagos@empresa.com", verified: false },
+    { id: 3, email: "tesoreria@empresa.com", verified: true },
+    { id: 4, email: "contabilidad@empresa.com", verified: false },
+    { id: 5, email: "notificaciones@empresa.com", verified: true },
   ]);
 
   const [interbanking, setInterbanking] = useState<InterbankingCuenta[]>([
@@ -41,6 +45,7 @@ function AgendasContent() {
 
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [emailRegistradoOk, setEmailRegistradoOk] = useState(false);
   const [activeTab, setActiveTab] = useState<"notificaciones" | "interbanking" | "debin">(
     "notificaciones",
   );
@@ -55,27 +60,42 @@ function AgendasContent() {
     }
   }, [searchParams]);
 
-  const listRef = useRef<HTMLDivElement | null>(null);
+  const listNotifRef = useRef<HTMLDivElement | null>(null);
+  const listIbRef = useRef<HTMLDivElement | null>(null);
+  const listDebinRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToAgenda = () => {
-    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const el =
+      activeTab === "notificaciones"
+        ? listNotifRef.current
+        : activeTab === "interbanking"
+          ? listIbRef.current
+          : listDebinRef.current;
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleAddAgenda = () => {
-    if (!nuevoEmail) {
+    const trimmed = nuevoEmail.trim();
+    if (!trimmed) {
+      setEmailRegistradoOk(false);
       setEmailError("Ingresa un correo electronico");
       return;
     }
-    if (!nuevoEmail.includes("@")) {
+    if (!trimmed.includes("@")) {
+      setEmailRegistradoOk(false);
       setEmailError("Ingresa un correo valido");
       return;
     }
-    setAgendas((prev) => [
-      ...prev,
-      { id: Date.now(), email: nuevoEmail, verified: false },
-    ]);
+    const normalized = trimmed.toLowerCase();
+    if (agendas.some((a) => a.email.toLowerCase() === normalized)) {
+      setEmailRegistradoOk(false);
+      setEmailError("Este correo ya está agendado");
+      return;
+    }
+    setAgendas((prev) => [...prev, { id: Date.now(), email: trimmed, verified: false }]);
     setNuevoEmail("");
     setEmailError("");
+    setEmailRegistradoOk(true);
   };
 
   const [nuevoCuit, setNuevoCuit] = useState("");
@@ -134,6 +154,27 @@ function AgendasContent() {
     [agendas.length, interbanking.length, debin.length],
   );
 
+  const tabTriggerClass = cn(
+    "h-10 cursor-pointer rounded-lg border-2 border-border/70 bg-secondary/50 px-2 text-xs font-medium text-muted-foreground shadow-sm",
+    "transition-all hover:border-emerald-500 hover:bg-secondary hover:text-foreground sm:text-sm",
+    "dark:hover:border-emerald-400",
+    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "data-[state=active]:border-primary data-[state=active]:bg-primary/15 data-[state=active]:text-foreground",
+    "data-[state=active]:font-semibold data-[state=active]:shadow-md dark:data-[state=active]:bg-primary/20",
+  );
+
+  /** Borde verde al hover (misma línea que CTAs tipo Agregar). */
+  const actionHoverGreenBorder = cn(
+    "border-2 border-transparent transition-colors",
+    "hover:border-emerald-500 dark:hover:border-emerald-400",
+  );
+
+  /** ~3 filas visibles; el resto con scroll (misma altura en las 3 agendas). */
+  const agendaListScrollBox = cn(
+    "max-h-[13.5rem] overflow-y-auto overscroll-contain rounded-xl border border-border/60 bg-muted/20 p-2",
+    "[scrollbar-gutter:stable] sm:max-h-[14rem]",
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -154,8 +195,8 @@ function AgendasContent() {
           <CardContent className="p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/40">
-                  <ShieldCheck className="h-6 w-6 text-muted-foreground" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 ring-1 ring-emerald-500/20 dark:bg-emerald-500/10 dark:ring-emerald-400/25">
+                  <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -166,10 +207,16 @@ function AgendasContent() {
               </div>
 
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full sm:w-auto">
-                <TabsList className="grid w-full grid-cols-3 bg-secondary/50 sm:w-[420px]">
-                  <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
-                  <TabsTrigger value="interbanking">Interbanking</TabsTrigger>
-                  <TabsTrigger value="debin">Debin</TabsTrigger>
+                <TabsList className="grid h-auto w-full grid-cols-3 gap-2 rounded-xl border border-border bg-muted/40 p-1.5 shadow-sm sm:w-[min(100%,28rem)]">
+                  <TabsTrigger value="notificaciones" className={tabTriggerClass}>
+                    Notificaciones
+                  </TabsTrigger>
+                  <TabsTrigger value="interbanking" className={tabTriggerClass}>
+                    Interbanking
+                  </TabsTrigger>
+                  <TabsTrigger value="debin" className={tabTriggerClass}>
+                    Debin
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -225,9 +272,10 @@ function AgendasContent() {
                     onChange={(e) => {
                       setNuevoEmail(e.target.value);
                       setEmailError("");
+                      setEmailRegistradoOk(false);
                     }}
                     onKeyDown={(e) => e.key === "Enter" && handleAddAgenda()}
-                    className="h-11 bg-secondary/50 border-0"
+                    className="h-11 border border-transparent bg-secondary/50"
                   />
                   {emailError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
@@ -240,60 +288,79 @@ function AgendasContent() {
                     Agregar
                   </Button>
                   <div className="flex justify-end">
-                    <Button variant="secondary" className="h-9 bg-secondary/50" onClick={scrollToAgenda}>
+                    <Button
+                      variant="secondary"
+                      className={cn("h-9 bg-secondary/50", actionHoverGreenBorder)}
+                      onClick={scrollToAgenda}
+                    >
                       Ver agenda
                     </Button>
                   </div>
+                  {emailRegistradoOk && (
+                    <div
+                      role="status"
+                      className="ml-auto max-w-lg rounded-xl bg-emerald-500 px-4 py-3 text-sm font-medium leading-snug text-white shadow-md dark:bg-emerald-600"
+                    >
+                      ¡Genial! Tu correo se ha registrado correctamente. Ahora, el siguiente paso es activar tu
+                      cuenta. Revisá tu bandeja de entrada, ya que te hemos enviado un correo con las instrucciones
+                      para la activación 😊
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            <div ref={listRef} className="mt-6 space-y-3">
-              {agendas.map((a) => (
-                <Card key={a.id} className="border-border bg-card">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                          a.verified ? "bg-primary/10" : "bg-chart-3/10"
-                        }`}
-                      >
-                        {a.verified ? (
-                          <CheckCircle2 className="h-6 w-6 text-primary" />
-                        ) : (
-                          <Clock className="h-6 w-6 text-chart-3" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{a.email}</p>
-                        <Badge
-                          variant="secondary"
-                          className={
-                            a.verified ? "bg-primary/20 text-primary" : "bg-chart-3/20 text-chart-3"
-                          }
+            <div ref={listNotifRef} className="mt-6">
+              <div className={agendaListScrollBox}>
+                <div className="space-y-2 pr-0.5">
+                  {agendas.map((a) => (
+                    <Card key={a.id} className="border-border bg-card gap-0 py-0 shadow-sm">
+                      <CardContent className="flex items-center justify-between px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                              a.verified ? "bg-primary/10" : "bg-chart-3/10"
+                            }`}
+                          >
+                            {a.verified ? (
+                              <CheckCircle2 className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-chart-3" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">{a.email}</p>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "mt-0.5 py-0 text-[10px] font-medium",
+                                a.verified ? "bg-primary/20 text-primary" : "bg-chart-3/20 text-chart-3",
+                              )}
+                            >
+                              {a.verified ? "Verificada" : "Pendiente de verificación"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setAgendas((prev) => prev.filter((x) => x.id !== a.id))}
                         >
-                          {a.verified ? "Verificada" : "Pendiente de verificación"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setAgendas((prev) => prev.filter((x) => x.id !== a.id))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-              {agendas.length === 0 && (
-                <Card className="border-border bg-card">
-                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                    No tenés agendas de notificación cargadas.
-                  </CardContent>
-                </Card>
-              )}
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {agendas.length === 0 && (
+                    <Card className="border-border bg-card">
+                      <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                        No tenés agendas de notificación cargadas.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -317,7 +384,7 @@ function AgendasContent() {
                   <Button
                     asChild
                     variant="secondary"
-                    className="h-9 bg-secondary/50"
+                    className={cn("h-9 bg-secondary/50", actionHoverGreenBorder)}
                   >
                     <a
                       href="/instructivo-ib-vep.pdf"
@@ -343,7 +410,7 @@ function AgendasContent() {
                       setNuevoCuit(e.target.value);
                       setInterbankingError("");
                     }}
-                    className="h-11 bg-secondary/50 border-0"
+                    className="h-11 border border-transparent bg-secondary/50"
                   />
                   <Input
                     placeholder="Nombre para agendar tu cuenta"
@@ -352,7 +419,7 @@ function AgendasContent() {
                       setNuevoNombreCuenta(e.target.value);
                       setInterbankingError("");
                     }}
-                    className="h-11 bg-secondary/50 border-0"
+                    className="h-11 border border-transparent bg-secondary/50"
                   />
                   {interbankingError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
@@ -367,7 +434,11 @@ function AgendasContent() {
                     Agregar
                   </Button>
                   <div className="flex justify-end">
-                    <Button variant="secondary" className="h-9 bg-secondary/50" onClick={scrollToAgenda}>
+                    <Button
+                      variant="secondary"
+                      className={cn("h-9 bg-secondary/50", actionHoverGreenBorder)}
+                      onClick={scrollToAgenda}
+                    >
                       Ver agenda
                     </Button>
                   </div>
@@ -375,42 +446,46 @@ function AgendasContent() {
               </Card>
             </div>
 
-            <div ref={listRef} className="mt-6 space-y-3">
-              {interbanking.map((c) => (
-                <Card key={c.id} className="border-border bg-card">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                        <Building2 className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{c.nombre}</p>
-                        <p className="font-mono text-sm text-muted-foreground">CUIT {c.cuit}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-primary/20 text-primary">
-                        Activo
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setInterbanking((prev) => prev.filter((x) => x.id !== c.id))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {interbanking.length === 0 && (
-                <Card className="border-border bg-card">
-                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                    No tenés cuentas de interbanking registradas.
-                  </CardContent>
-                </Card>
-              )}
+            <div ref={listIbRef} className="mt-6">
+              <div className={agendaListScrollBox}>
+                <div className="space-y-2 pr-0.5">
+                  {interbanking.map((c) => (
+                    <Card key={c.id} className="border-border bg-card gap-0 py-0 shadow-sm">
+                      <CardContent className="flex items-center justify-between px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <Building2 className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">{c.nombre}</p>
+                            <p className="truncate font-mono text-xs text-muted-foreground">CUIT {c.cuit}</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Badge variant="secondary" className="bg-primary/20 py-0 text-[10px] font-medium text-primary">
+                            Activo
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setInterbanking((prev) => prev.filter((x) => x.id !== c.id))}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {interbanking.length === 0 && (
+                    <Card className="border-border bg-card">
+                      <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                        No tenés cuentas de interbanking registradas.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -463,7 +538,7 @@ function AgendasContent() {
                     <Button
                       type="button"
                       variant={debinModalidad === "CBU" ? "default" : "secondary"}
-                      className={debinModalidad === "CBU" ? "" : "bg-secondary/50"}
+                      className={cn(debinModalidad === "CBU" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
                       onClick={() => setDebinModalidad("CBU")}
                     >
                       CBU
@@ -471,7 +546,7 @@ function AgendasContent() {
                     <Button
                       type="button"
                       variant={debinModalidad === "ALIAS" ? "default" : "secondary"}
-                      className={debinModalidad === "ALIAS" ? "" : "bg-secondary/50"}
+                      className={cn(debinModalidad === "ALIAS" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
                       onClick={() => setDebinModalidad("ALIAS")}
                     >
                       Alias
@@ -484,7 +559,7 @@ function AgendasContent() {
                       setDebinDato(e.target.value);
                       setDebinError("");
                     }}
-                    className="h-11 bg-secondary/50 border-0"
+                    className="h-11 border border-transparent bg-secondary/50"
                   />
                   <Input
                     placeholder="Nombre para agendar tu cuenta"
@@ -493,7 +568,7 @@ function AgendasContent() {
                       setDebinNombre(e.target.value);
                       setDebinError("");
                     }}
-                    className="h-11 bg-secondary/50 border-0"
+                    className="h-11 border border-transparent bg-secondary/50"
                   />
                   {debinError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
@@ -508,7 +583,11 @@ function AgendasContent() {
                     Agregar
                   </Button>
                   <div className="flex justify-end">
-                    <Button variant="secondary" className="h-9 bg-secondary/50" onClick={scrollToAgenda}>
+                    <Button
+                      variant="secondary"
+                      className={cn("h-9 bg-secondary/50", actionHoverGreenBorder)}
+                      onClick={scrollToAgenda}
+                    >
                       Ver agenda
                     </Button>
                   </div>
@@ -516,44 +595,48 @@ function AgendasContent() {
               </Card>
             </div>
 
-            <div ref={listRef} className="mt-6 space-y-3">
-              {debin.map((c) => (
-                <Card key={c.id} className="border-border bg-card">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                        <CreditCard className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{c.nombre}</p>
-                        <p className="font-mono text-sm text-muted-foreground">
-                          {c.modalidad} {c.dato}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-primary/20 text-primary">
-                        Activo
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setDebin((prev) => prev.filter((x) => x.id !== c.id))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {debin.length === 0 && (
-                <Card className="border-border bg-card">
-                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                    No tenés CBU/Alias registrados.
-                  </CardContent>
-                </Card>
-              )}
+            <div ref={listDebinRef} className="mt-6">
+              <div className={agendaListScrollBox}>
+                <div className="space-y-2 pr-0.5">
+                  {debin.map((c) => (
+                    <Card key={c.id} className="border-border bg-card gap-0 py-0 shadow-sm">
+                      <CardContent className="flex items-center justify-between px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <CreditCard className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">{c.nombre}</p>
+                            <p className="truncate font-mono text-xs text-muted-foreground">
+                              {c.modalidad} {c.dato}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Badge variant="secondary" className="bg-primary/20 py-0 text-[10px] font-medium text-primary">
+                            Activo
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setDebin((prev) => prev.filter((x) => x.id !== c.id))}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {debin.length === 0 && (
+                    <Card className="border-border bg-card">
+                      <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                        No tenés CBU/Alias registrados.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

@@ -61,11 +61,11 @@ export default function MisGestionesPage() {
                   placeholder="Buscar por Nro. de Transacción o BL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-12 bg-secondary/50 border-0 pl-12 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  className="h-12 border border-transparent bg-secondary/50 pl-12 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-12 w-full sm:w-[180px] bg-secondary/50 border-0">
+                <SelectTrigger className="h-12 w-full sm:w-[180px] border border-transparent bg-secondary/50">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>

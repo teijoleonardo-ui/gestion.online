@@ -9,11 +9,11 @@
 //     (`app/dashboard/retenciones/page.tsx`):
 //        fecha        → YYYY-MM-DD
 //        cuitEmisor   → 11 dígitos sin guiones · CUIT del SUJETO RETENIDO
-//                       (tu empresa, quien "emite" este comprobante hacia APC)
+//                       (no el de la agencia/armador; se elige el otro CUIT del PDF)
 //        contratante  → sigla en minúsculas (debe existir en lib/contratantes.ts)
 //                       · coincide con el AGENTE de retención (el armador que pagó)
 //        numero       → 10 dígitos con ceros a la izquierda
-//        tipo         → 'iva' | 'ganancias' | 'ibb_caba' | 'ibb_arba' | 'suss'
+//        tipo         → ver TipoRetencionValue (incl. jurisdicciones IIBB extra)
 //
 // Para PDFs escaneados (imagen), pdf.js no puede extraer texto. En ese caso
 // devuelve `{ ok: false, reason: 'scanned' }` y el formulario se deja en blanco
@@ -48,6 +48,11 @@ export type TipoRetencionValue =
   | "ganancias"
   | "ibb_caba"
   | "ibb_arba"
+  | "ibb_mendoza"
+  | "ibb_santa_fe"
+  | "ibb_rio_negro"
+  | "ibb_cordoba"
+  | "ibb_misiones"
   | "suss";
 
 export interface ExtractedRetencion {
@@ -170,9 +175,9 @@ function parseRetencionText(text: string): RawRetencion {
   return {
     fechaComprobante: extractFecha(text),
     agenteRazonSocial: extractRazonSocial(agent),
-    agenteCuit: extractCuit(agent) || extractFirstCuit(text),
+    agenteCuit: extractAgenciaCuit(agent),
     retenidoRazonSocial: extractRazonSocial(retained),
-    retenidoCuit: extractCuit(retained) || extractSecondCuit(text),
+    retenidoCuit: extractRetenidoCuit(agent, retained, text),
     numeroCertificado: extractNumeroCertificado(text),
     tipoRetencion: extractTipoRetencion(text),
     alicuota: extractAlicuota(text),
@@ -209,22 +214,61 @@ function extractCuit(text: string): string {
   return "";
 }
 
-function extractFirstCuit(text: string): string {
-  return extractCuit(text);
+/** Todos los CUIT del fragmento, en orden de aparición, sin duplicados. */
+function extractAllCuidsOrdered(text: string): string[] {
+  if (!text) return [];
+  const pushUnique = (arr: string[], raw: string) => {
+    const n = raw.replace(/\D/g, "").slice(0, 11);
+    if (n.length === 11 && !arr.includes(n)) arr.push(n);
+  };
+  const out: string[] = [];
+  for (const m of text.matchAll(/(?:CUIT|C\.U\.I\.T\.?)[:\s]+(\d{2}[-\s]?\d{8}[-\s]?\d)/gi)) {
+    pushUnique(out, m[1]);
+  }
+  for (const m of text.matchAll(/\b(\d{2}-\d{8}-\d)\b/g)) {
+    pushUnique(out, m[1]);
+  }
+  for (const m of text.matchAll(/\b(\d{11})\b/g)) {
+    pushUnique(out, m[1]);
+  }
+  return out;
 }
 
-function extractSecondCuit(text: string): string {
-  const all: string[] = [];
-  for (const m of text.matchAll(
-    /(?:CUIT|C\.U\.I\.T\.?)[:\s]+(\d{2}[-\s]?\d{8}[-\s]?\d)/gi,
-  )) {
-    all.push(m[1].replace(/[-\s]/g, ""));
+/**
+ * CUIT del agente de retención (armador): sólo dentro del bloque "agente",
+ * nunca el primer CUIT de todo el PDF (eso mezclaba agencia con emisor).
+ */
+function extractAgenciaCuit(agentSection: string): string {
+  const fromAgent = extractAllCuidsOrdered(agentSection);
+  return fromAgent[0] ?? "";
+}
+
+/**
+ * CUIT emisor / sujeto retenido: el del contribuyente al que se le retuvo,
+ * es decir el CUIT que no es el de la agencia en el certificado.
+ */
+function extractRetenidoCuit(
+  agentSection: string,
+  retainedSection: string,
+  fullText: string,
+): string {
+  const agencia = extractAgenciaCuit(agentSection);
+  const retainedList = extractAllCuidsOrdered(retainedSection);
+
+  if (agencia) {
+    for (const c of retainedList) {
+      if (c !== agencia) return c;
+    }
+    for (const c of extractAllCuidsOrdered(fullText)) {
+      if (c !== agencia) return c;
+    }
+    return "";
   }
+
+  if (retainedList.length > 0) return retainedList[0];
+  const all = extractAllCuidsOrdered(fullText);
   if (all.length >= 2) return all[1];
-  const bare: string[] = [];
-  for (const m of text.matchAll(/\b(\d{2}-\d{8}-\d)\b/g)) bare.push(m[1].replace(/-/g, ""));
-  if (bare.length >= 2) return bare[1];
-  return "";
+  return all[0] ?? "";
 }
 
 /**
