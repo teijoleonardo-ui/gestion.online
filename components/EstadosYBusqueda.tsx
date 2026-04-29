@@ -69,15 +69,16 @@ const ESTADOS_CONFIG = [
     id: "pendiente" as EstadoId,
     label: "Pendientes",
     icon: Clock,
-    color: "text-amber-400",
+    color: "text-amber-700 dark:text-amber-400",
     bg: "bg-amber-500/10",
-    border: "border-amber-500/20",
-    borderActive: "border-amber-400",
+    border: "border-amber-600/40",
+    borderActive: "border-amber-500",
     ringActive: "ring-1 ring-amber-400/40",
     hoverBg: "hover:bg-amber-500/15 dark:hover:bg-amber-500/10",
     activeBg: "bg-amber-500/20 dark:bg-amber-500/15",
-    badge: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    modalBorder: "border-amber-500/30",
+    badge:
+      "border-amber-700/45 bg-amber-500/12 text-amber-900 dark:border-amber-500/40 dark:text-amber-400",
+    modalBorder: "border-amber-600/50",
     modalHeader: "bg-amber-500/10",
     desc: "En revisión por nuestro equipo antes de ser aceptadas o rechazadas.",
   },
@@ -85,15 +86,16 @@ const ESTADOS_CONFIG = [
     id: "confirmada" as EstadoId,
     label: "Confirmadas",
     icon: CheckCircle2,
-    color: "text-emerald-400",
+    color: "text-emerald-700 dark:text-emerald-400",
     bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-    borderActive: "border-emerald-400",
+    border: "border-emerald-600/40",
+    borderActive: "border-emerald-500",
     ringActive: "ring-1 ring-emerald-400/40",
     hoverBg: "hover:bg-emerald-500/15 dark:hover:bg-emerald-500/10",
     activeBg: "bg-emerald-500/20 dark:bg-emerald-500/15",
-    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    modalBorder: "border-emerald-500/30",
+    badge:
+      "border-emerald-700/45 bg-emerald-500/12 text-emerald-900 dark:border-emerald-500/40 dark:text-emerald-400",
+    modalBorder: "border-emerald-600/50",
     modalHeader: "bg-emerald-500/10",
     desc: "Listas para aplicarse al próximo pago. Deben estar vigentes.",
   },
@@ -101,15 +103,16 @@ const ESTADOS_CONFIG = [
     id: "rechazada" as EstadoId,
     label: "Rechazadas",
     icon: XCircle,
-    color: "text-rose-400",
+    color: "text-rose-700 dark:text-rose-400",
     bg: "bg-rose-500/10",
-    border: "border-rose-500/20",
-    borderActive: "border-rose-400",
+    border: "border-rose-600/40",
+    borderActive: "border-rose-500",
     ringActive: "ring-1 ring-rose-400/40",
     hoverBg: "hover:bg-rose-500/15 dark:hover:bg-rose-500/10",
     activeBg: "bg-rose-500/20 dark:bg-rose-500/15",
-    badge: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    modalBorder: "border-rose-500/30",
+    badge:
+      "border-rose-700/45 bg-rose-500/12 text-rose-900 dark:border-rose-500/40 dark:text-rose-400",
+    modalBorder: "border-rose-600/50",
     modalHeader: "bg-rose-500/10",
     desc: "Difieren con el comprobante cargado. Cuentan con el motivo del rechazo.",
   },
@@ -117,15 +120,16 @@ const ESTADOS_CONFIG = [
     id: "aplicada" as EstadoId,
     label: "Aplicadas",
     icon: ShieldCheck,
-    color: "text-blue-400",
+    color: "text-blue-700 dark:text-blue-400",
     bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
-    borderActive: "border-blue-400",
+    border: "border-blue-600/40",
+    borderActive: "border-blue-500",
     ringActive: "ring-1 ring-blue-400/40",
     hoverBg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/10",
     activeBg: "bg-blue-500/20 dark:bg-blue-500/15",
-    badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    modalBorder: "border-blue-500/30",
+    badge:
+      "border-blue-700/45 bg-blue-500/12 text-blue-900 dark:border-blue-500/40 dark:text-blue-400",
+    modalBorder: "border-blue-600/50",
     modalHeader: "bg-blue-500/10",
     desc: "Ya fueron incluidas en el pago de una transacción.",
   },
@@ -321,7 +325,7 @@ export function EstadosYBusqueda() {
                       Retenciones {cfgModal.label.toLowerCase()}
                     </h2>
                     {resultados !== null && !cargando && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-neutral-700 dark:text-muted-foreground">
                         {resultados.length === 0
                           ? "Sin resultados"
                           : `${resultados.length} retención${resultados.length !== 1 ? "es" : ""}`}
@@ -332,7 +336,7 @@ export function EstadosYBusqueda() {
                 <button
                   type="button"
                   onClick={cerrarModal}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-secondary/30 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-400/65 bg-secondary/40 text-neutral-700 transition-colors hover:border-neutral-500 hover:bg-secondary/70 hover:text-foreground dark:border-border/60 dark:bg-secondary/30 dark:text-muted-foreground dark:hover:border-white/20 dark:hover:bg-secondary/60"
                   aria-label="Cerrar"
                 >
                   <X className="h-4 w-4" />
@@ -346,7 +350,7 @@ export function EstadosYBusqueda() {
                     <Loader2 className={cn("h-6 w-6 animate-spin", cfgModal.color)} />
                   </div>
                 ) : resultados === null ? null : resultados.length === 0 ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/10 px-4 py-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 rounded-lg border border-border/90 bg-secondary/15 px-4 py-3 text-xs text-neutral-700 dark:border-border dark:bg-secondary/10 dark:text-muted-foreground">
                     <Info className="h-3.5 w-3.5 shrink-0" />
                     No encontramos retenciones con ese estado.
                   </div>
@@ -360,14 +364,14 @@ export function EstadosYBusqueda() {
                         <div
                           key={r.numero}
                           className={cn(
-                            "overflow-hidden rounded-lg border bg-secondary/20",
+                            "overflow-hidden rounded-lg border bg-background",
                             cfg.border,
                           )}
                         >
                           <button
                             type="button"
                             onClick={() => setFilaAbierta(expandida ? null : r.numero)}
-                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40 dark:hover:bg-secondary/40"
                           >
                             <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-md", cfg.bg)}>
                               <Icon className={cn("h-3.5 w-3.5", cfg.color)} />
@@ -377,19 +381,19 @@ export function EstadosYBusqueda() {
                               #{r.numero}
                             </span>
  
-                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-700 dark:text-muted-foreground">
                               <span>{r.fecha}</span>
-                              <ChevronRight className="h-3 w-3 shrink-0 opacity-30" />
+                              <ChevronRight className="h-3 w-3 shrink-0 text-neutral-500 opacity-90 dark:text-muted-foreground/70" />
                               <span className="font-mono">{r.cuitEmisor}</span>
-                              <ChevronRight className="h-3 w-3 shrink-0 opacity-30" />
+                              <ChevronRight className="h-3 w-3 shrink-0 text-neutral-500 opacity-90 dark:text-muted-foreground/70" />
                               <span className="truncate">{r.contratante}</span>
-                              <ChevronRight className="h-3 w-3 shrink-0 opacity-30" />
-                              <span className="font-medium text-foreground/70">{r.tipo}</span>
+                              <ChevronRight className="h-3 w-3 shrink-0 text-neutral-500 opacity-90 dark:text-muted-foreground/70" />
+                              <span className="font-medium text-neutral-900 dark:text-foreground/85">{r.tipo}</span>
                             </div>
- 
+
                             <ChevronDown
                               className={cn(
-                                "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                                "h-4 w-4 shrink-0 text-neutral-700 transition-transform duration-200 dark:text-muted-foreground",
                                 expandida && "rotate-180",
                               )}
                               aria-hidden
@@ -401,44 +405,46 @@ export function EstadosYBusqueda() {
                           </button>
  
                           {expandida && (
-                            <div className="border-t border-border/60 bg-muted/20">
-                              <div className="px-3 py-2.5 text-xs text-muted-foreground">
+                            <div className="border-t border-border bg-muted/25 dark:bg-muted/15">
+                              <div className="px-3 py-2.5 text-xs text-neutral-800 dark:text-muted-foreground">
                                 <dl className="grid gap-2 sm:grid-cols-2">
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Pedido</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">
+                                      Pedido
+                                    </dt>
                                     <dd className="font-mono text-foreground">{r.pedido}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Número de retención</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Número de retención</dt>
                                     <dd className="font-mono text-foreground">#{r.numero}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">CUIT emisor</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">CUIT emisor</dt>
                                     <dd className="font-mono text-foreground">{r.cuitEmisor}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Importe</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Importe</dt>
                                     <dd className="font-medium text-foreground">$ {r.importe}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Transacción</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Transacción</dt>
                                     <dd className="font-mono text-foreground">{r.transaccion}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Fecha de la retención</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Fecha de la retención</dt>
                                     <dd className="text-foreground">{r.fecha}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Vencimiento</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Vencimiento</dt>
                                     <dd className="text-foreground">{r.vencimiento}</dd>
                                   </div>
                                   <div>
-                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Estado</dt>
+                                    <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Estado</dt>
                                     <dd className="text-foreground">{cfg.label.slice(0, -1)}</dd>
                                   </div>
                                   {r.observacion && (
                                     <div className="sm:col-span-2">
-                                      <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Observación</dt>
+                                      <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-600 dark:text-muted-foreground/85">Observación</dt>
                                       <dd className="text-foreground">{r.observacion}</dd>
                                     </div>
                                   )}

@@ -168,10 +168,10 @@ export default function ConfiguracionPage() {
           <Card className="border-border bg-card">
             <CardContent className="flex flex-col items-center p-6 text-center">
               <div className="relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/10 text-2xl font-bold text-emerald-300 ring-1 ring-inset ring-white/10">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/10 text-2xl font-bold text-emerald-700 ring-2 ring-inset ring-emerald-700/40 dark:text-emerald-300 dark:ring-emerald-500/35">
                   {getInitials(CURRENT_USER.nombre)}
                 </div>
-                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-emerald-500 text-emerald-950">
+                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-800/50 bg-emerald-500 text-emerald-950 dark:border-card">
                   <ShieldCheck className="h-3 w-3" />
                 </span>
               </div>
@@ -191,7 +191,7 @@ export default function ConfiguracionPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Usuario
                 </p>
-                <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-secondary/30 px-3 py-2.5">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-800/25 bg-secondary/30 px-3 py-2.5 dark:border-white/10">
                   <User className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="truncate text-sm text-foreground">
                     {CURRENT_USER.nombre}
@@ -205,7 +205,7 @@ export default function ConfiguracionPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => router.push("/")}
-                className="mt-5 w-full justify-center gap-2 border border-rose-500/20 bg-rose-500/5 text-rose-300 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200"
+                className="mt-5 w-full justify-center gap-2 border-2 border-rose-600/45 bg-rose-500/5 text-rose-800 hover:border-rose-700/70 hover:bg-rose-500/12 hover:text-rose-950 dark:border-rose-500/45 dark:bg-rose-500/5 dark:text-rose-300 dark:hover:border-rose-400/55 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
               >
                 <LogOut className="h-4 w-4" />
                 Cerrar sesión
