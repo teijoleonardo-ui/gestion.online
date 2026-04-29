@@ -16,15 +16,29 @@ import {
   Bell,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { DebinCuenta, InterbankingCuenta } from "@/lib/agendas-storage";
+import {
+  loadDebinAgendas,
+  loadInterbankingAgendas,
+  saveDebinAgendas,
+  saveInterbankingAgendas,
+} from "@/lib/agendas-storage";
 
 type Agenda = { id: number; email: string; verified: boolean };
-type InterbankingCuenta = { id: number; cuit: string; nombre: string; activo: boolean };
-type DebinCuenta = { id: number; modalidad: "CBU" | "ALIAS"; dato: string; nombre: string; activo: boolean };
+
+const DEFAULT_INTERBANKING_SEED: InterbankingCuenta[] = [
+  { id: 1, cuit: "30-71234567-9", nombre: "Cuenta principal", activo: true },
+];
+
+const DEFAULT_DEBIN_SEED: DebinCuenta[] = [
+  { id: 1, modalidad: "CBU", dato: "0110012340012345678901", nombre: "CBU pagos", activo: true },
+];
 
 function AgendasContent() {
   const [agendas, setAgendas] = useState<Agenda[]>([
@@ -35,13 +49,13 @@ function AgendasContent() {
     { id: 5, email: "notificaciones@empresa.com", verified: true },
   ]);
 
-  const [interbanking, setInterbanking] = useState<InterbankingCuenta[]>([
-    { id: 1, cuit: "30-71234567-9", nombre: "Cuenta principal", activo: true },
-  ]);
+  const [interbanking, setInterbanking] =
+    useState<InterbankingCuenta[]>(DEFAULT_INTERBANKING_SEED);
 
-  const [debin, setDebin] = useState<DebinCuenta[]>([
-    { id: 1, modalidad: "CBU", dato: "0110012340012345678901", nombre: "CBU pagos", activo: true },
-  ]);
+  const [debin, setDebin] = useState<DebinCuenta[]>(DEFAULT_DEBIN_SEED);
+
+  /** Evita sobrescribir localStorage antes de leer datos guardados (primer paint). */
+  const [agendasStorageReady, setAgendasStorageReady] = useState(false);
 
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -59,6 +73,24 @@ function AgendasContent() {
       setActiveTab(requested);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const ib = loadInterbankingAgendas();
+    const db = loadDebinAgendas();
+    if (ib.length > 0) setInterbanking(ib);
+    if (db.length > 0) setDebin(db);
+    setAgendasStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!agendasStorageReady) return;
+    saveInterbankingAgendas(interbanking);
+  }, [agendasStorageReady, interbanking]);
+
+  useEffect(() => {
+    if (!agendasStorageReady) return;
+    saveDebinAgendas(debin);
+  }, [agendasStorageReady, debin]);
 
   const listNotifRef = useRef<HTMLDivElement | null>(null);
   const listIbRef = useRef<HTMLDivElement | null>(null);
@@ -265,18 +297,24 @@ function AgendasContent() {
                   <CardDescription>Cargá tu mail</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Input
-                    type="email"
-                    placeholder="Ingresar tu mail"
-                    value={nuevoEmail}
-                    onChange={(e) => {
-                      setNuevoEmail(e.target.value);
-                      setEmailError("");
-                      setEmailRegistradoOk(false);
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddAgenda()}
-                    className="h-11 border border-transparent bg-secondary/50"
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="agenda-email-notif" className="text-xs font-semibold text-foreground sm:text-sm">
+                      Mail
+                    </Label>
+                    <Input
+                      id="agenda-email-notif"
+                      type="email"
+                      placeholder="Ingresar tu mail"
+                      value={nuevoEmail}
+                      onChange={(e) => {
+                        setNuevoEmail(e.target.value);
+                        setEmailError("");
+                        setEmailRegistradoOk(false);
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddAgenda()}
+                      className="h-11 border border-transparent bg-secondary/50"
+                    />
+                  </div>
                   {emailError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
                       <AlertCircle className="h-3 w-3" />
@@ -299,11 +337,17 @@ function AgendasContent() {
                   {emailRegistradoOk && (
                     <div
                       role="status"
-                      className="ml-auto max-w-lg rounded-xl bg-emerald-500 px-4 py-3 text-sm font-medium leading-snug text-white shadow-md dark:bg-emerald-600"
+                      className="ml-auto flex max-w-lg items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium leading-snug text-emerald-950 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-50"
                     >
-                      ¡Genial! Tu correo se ha registrado correctamente. Ahora, el siguiente paso es activar tu
-                      cuenta. Revisá tu bandeja de entrada, ya que te hemos enviado un correo con las instrucciones
-                      para la activación 😊
+                      <CheckCircle2
+                        className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+                        aria-hidden
+                      />
+                      <span>
+                        ¡Genial! Tu correo se ha registrado correctamente. Ahora, el siguiente paso es activar tu
+                        cuenta. Revisá tu bandeja de entrada, ya que te hemos enviado un correo con las instrucciones
+                        para la activación 😊
+                      </span>
                     </div>
                   )}
                 </CardContent>
@@ -403,24 +447,36 @@ function AgendasContent() {
                   <CardDescription>Completá los datos</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Input
-                    placeholder="CUIT de tu cuenta interbanking"
-                    value={nuevoCuit}
-                    onChange={(e) => {
-                      setNuevoCuit(e.target.value);
-                      setInterbankingError("");
-                    }}
-                    className="h-11 border border-transparent bg-secondary/50"
-                  />
-                  <Input
-                    placeholder="Nombre para agendar tu cuenta"
-                    value={nuevoNombreCuenta}
-                    onChange={(e) => {
-                      setNuevoNombreCuenta(e.target.value);
-                      setInterbankingError("");
-                    }}
-                    className="h-11 border border-transparent bg-secondary/50"
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ib-cuit" className="text-xs font-semibold text-foreground sm:text-sm">
+                      Cuit
+                    </Label>
+                    <Input
+                      id="ib-cuit"
+                      placeholder="Cuit de tu cuenta interbanking"
+                      value={nuevoCuit}
+                      onChange={(e) => {
+                        setNuevoCuit(e.target.value);
+                        setInterbankingError("");
+                      }}
+                      className="h-11 border border-transparent bg-secondary/50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ib-nombre" className="text-xs font-semibold text-foreground sm:text-sm">
+                      Nombre para agendar tu cuenta
+                    </Label>
+                    <Input
+                      id="ib-nombre"
+                      placeholder="Ingresar nombre"
+                      value={nuevoNombreCuenta}
+                      onChange={(e) => {
+                        setNuevoNombreCuenta(e.target.value);
+                        setInterbankingError("");
+                      }}
+                      className="h-11 border border-transparent bg-secondary/50"
+                    />
+                  </div>
                   {interbankingError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
                       <AlertCircle className="h-3 w-3" />
@@ -534,42 +590,59 @@ function AgendasContent() {
                   <CardDescription>Completá los datos</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={debinModalidad === "CBU" ? "default" : "secondary"}
-                      className={cn(debinModalidad === "CBU" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
-                      onClick={() => setDebinModalidad("CBU")}
-                    >
-                      CBU
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={debinModalidad === "ALIAS" ? "default" : "secondary"}
-                      className={cn(debinModalidad === "ALIAS" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
-                      onClick={() => setDebinModalidad("ALIAS")}
-                    >
-                      Alias
-                    </Button>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-foreground sm:text-sm">
+                      Modalidad de alta
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={debinModalidad === "CBU" ? "default" : "secondary"}
+                        className={cn(debinModalidad === "CBU" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
+                        onClick={() => setDebinModalidad("CBU")}
+                      >
+                        CBU
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={debinModalidad === "ALIAS" ? "default" : "secondary"}
+                        className={cn(debinModalidad === "ALIAS" ? "" : "bg-secondary/50", actionHoverGreenBorder)}
+                        onClick={() => setDebinModalidad("ALIAS")}
+                      >
+                        Alias
+                      </Button>
+                    </div>
                   </div>
-                  <Input
-                    placeholder={debinModalidad === "CBU" ? "Ingresar CBU" : "Ingresar Alias"}
-                    value={debinDato}
-                    onChange={(e) => {
-                      setDebinDato(e.target.value);
-                      setDebinError("");
-                    }}
-                    className="h-11 border border-transparent bg-secondary/50"
-                  />
-                  <Input
-                    placeholder="Nombre para agendar tu cuenta"
-                    value={debinNombre}
-                    onChange={(e) => {
-                      setDebinNombre(e.target.value);
-                      setDebinError("");
-                    }}
-                    className="h-11 border border-transparent bg-secondary/50"
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="debin-dato" className="text-xs font-semibold text-foreground sm:text-sm">
+                      Datos bancarios
+                    </Label>
+                    <Input
+                      id="debin-dato"
+                      placeholder={debinModalidad === "CBU" ? "Ingresa CBU" : "Ingresa Alias"}
+                      value={debinDato}
+                      onChange={(e) => {
+                        setDebinDato(e.target.value);
+                        setDebinError("");
+                      }}
+                      className="h-11 border border-transparent bg-secondary/50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="debin-nombre" className="text-xs font-semibold text-foreground sm:text-sm">
+                      Nombre para agendar tu cuenta
+                    </Label>
+                    <Input
+                      id="debin-nombre"
+                      placeholder="Ingresar nombre"
+                      value={debinNombre}
+                      onChange={(e) => {
+                        setDebinNombre(e.target.value);
+                        setDebinError("");
+                      }}
+                      className="h-11 border border-transparent bg-secondary/50"
+                    />
+                  </div>
                   {debinError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
                       <AlertCircle className="h-3 w-3" />

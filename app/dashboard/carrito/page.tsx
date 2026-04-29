@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +17,13 @@ import {
   ArrowLeft,
   ChevronDown,
   Clock,
+  ClipboardCheck,
+  Layers,
+  ListOrdered,
+  Wallet,
+  Mail,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -33,6 +40,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DASHBOARD_TARGET_SECTION_STORAGE_KEY } from "@/lib/section-spotlight";
+import {
+  AGENDAS_STORAGE_CHANGED_EVENT,
+  DEBIN_STORAGE_KEY,
+  INTERBANKING_STORAGE_KEY,
+  agendaAutomaticaValueDebin,
+  agendaAutomaticaValueIb,
+  formatDebinCheckoutLabel,
+  formatInterbankingCheckoutLabel,
+  loadDebinAgendas,
+  loadInterbankingAgendas,
+  type DebinCuenta,
+  type InterbankingCuenta,
+} from "@/lib/agendas-storage";
 import {
   Table,
   TableBody,
@@ -63,6 +83,13 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { CONTRATANTES } from "@/lib/contratantes";
+import {
+  APM_DRAFT_CHECKOUT_SESSION_KEY,
+  conceptosTerminalToCartLines,
+  type ApmDraftCheckoutSession,
+} from "@/lib/apm-draft-checkout";
+import { dispatchCartAdded } from "@/lib/cart-events";
+import { loadCartItemsFromStorage, saveCartItemsToStorage } from "@/lib/cart-storage";
 
 // ─── Modelo ──────────────────────────────────────────────────────────
 // Alineado a "Abonar Gastos y Generar Boleta de Transacción Web":
@@ -91,7 +118,7 @@ type RetencionAplicada = {
   id: string;
   bl: string;
   tipo: string;
-  moneda: Moneda;
+  /** Siempre en pesos; las transacciones se liquidan solo en ARS. */
   importe: number;
 };
 
@@ -113,7 +140,7 @@ const FACTURACION_APC_DEFAULT: Omit<BlDetalleFacturacion, "itemRef"> = {
   tipoComprobante: "FACTURA RECIBO",
 };
 
-/** Mock por BL; si no hay entrada se usa `bl` como `itemRef` y el resto APC por defecto. */
+/** Mock por BL; el TC definitivo y errores de negocio los define el backend (Mis gestiones). */
 const mockDetalleFacturacionPorBl: Record<string, BlDetalleFacturacion> = {
   ONEYXYZ7654321: {
     itemRef: "ONEYAPC123456",
@@ -122,18 +149,16 @@ const mockDetalleFacturacionPorBl: Record<string, BlDetalleFacturacion> = {
   ONEYHAMG21045801: {
     itemRef: "ONEYAPC210458",
     ...FACTURACION_APC_DEFAULT,
-    cotizacion: 1208.2,
   },
   ONEYCAIG01615400: {
     itemRef: "ONEYAPC016154",
     ...FACTURACION_APC_DEFAULT,
-    cotizacion: 1206.9,
   },
   ZIMUABC1234567: {
     itemRef: "ZIMAPC1234567",
     cuit: "30707121706",
     razonSocial: "ADMINISTRATIVE PROCESSING CENTER SA",
-    cotizacion: 1195.0,
+    cotizacion: FACTURACION_APC_DEFAULT.cotizacion,
     tipoComprobante: "FACTURA RECIBO",
   },
 };
@@ -203,20 +228,14 @@ const observacionesAgencia: ObservacionAgencia[] = [
 ];
 
 const retencionesConfirmadas: RetencionAplicada[] = [
-  { id: "RET-001", bl: "ZIMUABC1234567", tipo: "IVA", moneda: "USD", importe: 21.5 },
-  { id: "RET-002", bl: "ONEYXYZ7654321", tipo: "GANANCIAS", moneda: "USD", importe: 8.7 },
-  { id: "RET-003", bl: "ONEYCAIG01615400", tipo: "IVA", moneda: "USD", importe: 12.25 },
+  { id: "RET-001", bl: "ZIMUABC1234567", tipo: "IVA", importe: 25961.25 },
+  { id: "RET-002", bl: "ONEYXYZ7654321", tipo: "GANANCIAS", importe: 10505.25 },
+  { id: "RET-003", bl: "ONEYCAIG01615400", tipo: "IVA", importe: 14791.88 },
 ];
 
 const agendas = [
   { value: "facturacion@empresa.com", label: "facturacion@empresa.com", agendada: true },
   { value: "pagos@empresa.com", label: "pagos@empresa.com", agendada: true },
-];
-
-/** Agendas de pagos automáticos (mock; en producción depende del medio de pago). */
-const agendasPagosAutomaticos = [
-  { value: "auto-vep-principal", label: "VEP · Cuenta corriente principal" },
-  { value: "auto-debin-proveedores", label: "DEBIN · Pagos a proveedores" },
 ];
 
 const AGENDA_AUTOMATICA_NO_APLICA = "na";
@@ -245,7 +264,8 @@ const fmtMoneda = (n: number) =>
 export default function CarritoPage() {
   const router = useRouter();
 
-  const [items, setItems] = useState<CartItem[]>(() => seedCartItemsWithAddedAt(initialItemsRaw));
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [checkoutSigla, setCheckoutSigla] = useState<string | null>(null);
   const [expandedBl, setExpandedBl] = useState<string | null>(null);
   /** En checkout, bloque informativo APC/retenciones plegado por defecto para ahorrar altura. */
@@ -253,6 +273,8 @@ export default function CarritoPage() {
   const [medioPago, setMedioPago] = useState("");
   const [agendaPagoAutomatico, setAgendaPagoAutomatico] = useState("");
   const [agendaMail, setAgendaMail] = useState("");
+  const [interbankingCheckout, setInterbankingCheckout] = useState<InterbankingCuenta[]>([]);
+  const [debinCheckout, setDebinCheckout] = useState<DebinCuenta[]>([]);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generando, setGenerando] = useState(false);
@@ -260,6 +282,18 @@ export default function CarritoPage() {
   const [ultimaOperacionContratante, setUltimaOperacionContratante] = useState<string | null>(
     null,
   );
+  /** Tras quitar el último BL del contratante en checkout, si queda otro carrito en la cuenta. */
+  const [bannerCarritoEliminado, setBannerCarritoEliminado] = useState(false);
+  const bannerRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (bannerRedirectTimerRef.current) {
+        clearTimeout(bannerRedirectTimerRef.current);
+        bannerRedirectTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setExpandedBl(null);
@@ -282,6 +316,113 @@ export default function CarritoPage() {
       );
     }
   }, [medioPago, medioSeleccionado?.requiereAgenda]);
+
+  useEffect(() => {
+    const sync = () => {
+      setInterbankingCheckout(loadInterbankingAgendas());
+      setDebinCheckout(loadDebinAgendas());
+    };
+    sync();
+    window.addEventListener(AGENDAS_STORAGE_CHANGED_EVENT, sync);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === INTERBANKING_STORAGE_KEY || e.key === DEBIN_STORAGE_KEY) sync();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(AGENDAS_STORAGE_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  /** Hidratar desde localStorage (si hubo guardado) o seed demo solo en primera visita; fusionar draft APM desde consulta. */
+  useEffect(() => {
+    let next: CartItem[] = seedCartItemsWithAddedAt(initialItemsRaw);
+    const loaded = loadCartItemsFromStorage();
+    if (loaded !== null) {
+      next = loaded as CartItem[];
+    }
+
+    try {
+      const raw = sessionStorage.getItem(APM_DRAFT_CHECKOUT_SESSION_KEY);
+      if (raw) {
+        sessionStorage.removeItem(APM_DRAFT_CHECKOUT_SESSION_KEY);
+        const payload = JSON.parse(raw) as ApmDraftCheckoutSession;
+        const blKey = (payload.bl ?? "").trim();
+        if (blKey && Array.isArray(payload.conceptos) && payload.conceptos.length > 0) {
+          const maxId = next.reduce((m, i) => Math.max(m, i.id), 0);
+          const base = maxId + 1;
+          const addedAt = new Date().toISOString();
+          const lines = conceptosTerminalToCartLines(payload.conceptos, blKey, base).map((row) => ({
+            ...row,
+            addedAt,
+          }));
+          next = [...next.filter((i) => !(i.contratanteSigla === "APM" && i.bl === blKey)), ...lines];
+          setCheckoutSigla("APM");
+          setExpandedBl(blKey);
+          dispatchCartAdded();
+          requestAnimationFrame(() => {
+            const safeId = blKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+            document.getElementById(`carrito-bl-${safeId}`)?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    setItems(next);
+    setCartHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+    saveCartItemsToStorage(items);
+  }, [items, cartHydrated]);
+
+  useEffect(() => {
+    if (!checkoutSigla) return;
+    const remaining = items.filter((i) => i.contratanteSigla === checkoutSigla).length;
+    if (remaining > 0) return;
+    setCheckoutSigla(null);
+    setMedioPago("");
+    setAgendaPagoAutomatico("");
+    setAgendaMail("");
+    setExpandedBl(null);
+    setConfirmOpen(false);
+  }, [items, checkoutSigla]);
+
+  const opcionesAgendaAutomatica = useMemo(() => {
+    if (!medioSeleccionado?.requiereAgenda || !medioPago) return [];
+    if (medioPago === "vep") {
+      return interbankingCheckout
+        .filter((c) => c.activo)
+        .map((c) => ({
+          value: agendaAutomaticaValueIb(c.id),
+          label: formatInterbankingCheckoutLabel(c),
+        }));
+    }
+    if (medioPago === "debin") {
+      return debinCheckout
+        .filter((c) => c.activo)
+        .map((c) => ({
+          value: agendaAutomaticaValueDebin(c.id),
+          label: formatDebinCheckoutLabel(c),
+        }));
+    }
+    return [];
+  }, [medioPago, medioSeleccionado?.requiereAgenda, interbankingCheckout, debinCheckout]);
+
+  useEffect(() => {
+    if (!medioSeleccionado?.requiereAgenda) return;
+    setAgendaPagoAutomatico((prev) => {
+      if (!prev) return prev;
+      if (opcionesAgendaAutomatica.some((o) => o.value === prev)) return prev;
+      return "";
+    });
+  }, [medioSeleccionado?.requiereAgenda, opcionesAgendaAutomatica]);
 
   const carritosPorContratante = useMemo(() => {
     const map = new Map<string, CartItem[]>();
@@ -333,28 +474,77 @@ export default function CarritoPage() {
     .filter((i) => i.moneda === "ARS")
     .reduce((s, i) => s + i.importe, 0);
 
-  const retencionUSD = retencionesCheckout
-    .filter((r) => r.moneda === "USD")
-    .reduce((s, r) => s + r.importe, 0);
-  const retencionARS = retencionesCheckout
-    .filter((r) => r.moneda === "ARS")
-    .reduce((s, r) => s + r.importe, 0);
+  /**
+   * TC del carrito (cada agencia marítima define el suyo por día; mock: promedio por BL).
+   * En producción vendrá un único valor desde backend por operación.
+   */
+  const tipoCambioCheckout = useMemo(() => {
+    const bls = [...new Set(itemsCheckout.map((i) => i.bl))];
+    if (bls.length === 0) return FACTURACION_APC_DEFAULT.cotizacion;
+    return (
+      bls.reduce((s, bl) => s + detalleFacturacionParaBl(bl).cotizacion, 0) / bls.length
+    );
+  }, [itemsCheckout]);
 
-  const netoUSD = Math.max(0, totalUSD - retencionUSD);
-  const netoARSConceptos = Math.max(0, totalARS - retencionARS);
-  const netoARSConApc =
-    netoARSConceptos +
-    TARIFA_SERVICIO_APC_CONTADO_ARS +
-    TARIFA_SERVICIO_APC_CTA_CTE_ARS;
+  /** Conceptos en ARS alineados con USD: pesos cargados + USD×TC (equivale a la misma economía que la fila USD). */
+  const detalleConceptosARS =
+    totalARS + (tipoCambioCheckout > 0 ? totalUSD * tipoCambioCheckout : 0);
+
+  /** Misma base expresada en USD: ARS÷TC = USD conceptual unificado. */
+  const detalleConceptosUSD =
+    tipoCambioCheckout > 0 ? detalleConceptosARS / tipoCambioCheckout : 0;
+
+  /** Retenciones siempre en pesos (no hay retenciones en USD). */
+  const retencionesTotalARS = useMemo(
+    () => retencionesCheckout.reduce((s, r) => s + r.importe, 0),
+    [retencionesCheckout],
+  );
+
+  const sumaTarifasApcARS =
+    TARIFA_SERVICIO_APC_CONTADO_ARS + TARIFA_SERVICIO_APC_CTA_CTE_ARS;
+
+  /**
+   * Total del recuadro: conceptos (ARS unificados con USD vía TC) + tarifas APC − retenciones.
+   */
+  const totalDetalleImporteARS = Math.max(
+    0,
+    detalleConceptosARS + sumaTarifasApcARS - retencionesTotalARS,
+  );
+
+  /** Conceptos en USD del carrito (sin retenciones en USD en este flujo). */
+  const netoUSD = totalUSD;
 
   const handleRemoveBL = (bl: string) => {
-    setItems((prev) => prev.filter((i) => i.bl !== bl));
+    const siglaCheckout = checkoutSigla;
+    const prevItems = items;
+    const nextItems = prevItems.filter((i) => i.bl !== bl);
+
+    const quedoSinItemsEsteContratante =
+      !!siglaCheckout &&
+      nextItems.filter((i) => i.contratanteSigla === siglaCheckout).length === 0;
+
+    setItems(nextItems);
+
+    if (quedoSinItemsEsteContratante && nextItems.length > 0) {
+      setBannerCarritoEliminado(true);
+      if (bannerRedirectTimerRef.current) {
+        clearTimeout(bannerRedirectTimerRef.current);
+        bannerRedirectTimerRef.current = null;
+      }
+      bannerRedirectTimerRef.current = setTimeout(() => {
+        bannerRedirectTimerRef.current = null;
+        setBannerCarritoEliminado(false);
+        router.push("/dashboard/carrito");
+      }, 3200);
+    }
   };
 
   const agendaAutomaticaOk =
     !!agendaPagoAutomatico &&
     (agendaPagoAutomatico === AGENDA_AUTOMATICA_NO_APLICA ||
-      agendasPagosAutomaticos.some((a) => a.value === agendaPagoAutomatico));
+      opcionesAgendaAutomatica.some((a) => a.value === agendaPagoAutomatico));
+
+  const faltaDatosPagoCheckout = !medioPago || !agendaMail || !agendaAutomaticaOk;
 
   const puedeGenerar =
     !!checkoutSigla &&
@@ -385,6 +575,15 @@ export default function CarritoPage() {
     : null;
 
   const totalBlsEnLista = carritosPorContratante.reduce((s, c) => s + c.blCount, 0);
+
+  if (!cartHydrated) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-3 bg-background px-6">
+        <Loader2 className="h-9 w-9 animate-spin text-muted-foreground" aria-hidden />
+        <p className="text-sm text-muted-foreground">Cargando carrito…</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -421,11 +620,27 @@ export default function CarritoPage() {
         </div>
       ) : (
         <>
+          {bannerCarritoEliminado && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex shrink-0 items-start gap-3 border-b border-emerald-200/80 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/35 dark:text-emerald-50 sm:items-center sm:justify-center sm:px-6 sm:text-center"
+            >
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400 sm:mt-0"
+                aria-hidden
+              />
+              <span className="leading-snug">
+                <span className="font-semibold">El carrito ha sido eliminado.</span> En unos segundos
+                vas a volver al listado de carritos con tus cargas pendientes.
+              </span>
+            </div>
+          )}
           <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-background/90 backdrop-blur-xl">
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-2",
-                checkoutSigla ? "h-11 px-3 py-1" : "h-16 gap-3 px-6 py-0",
+                checkoutSigla ? "h-11 px-1.5 py-1 sm:px-3" : "h-16 gap-3 px-6 py-0",
               )}
             >
               <div className="min-w-0">
@@ -477,7 +692,7 @@ export default function CarritoPage() {
             className={cn(
               "mx-auto w-full min-w-0 flex-1",
               checkoutSigla
-                ? "max-w-6xl px-2 py-1 sm:px-3 sm:py-2"
+                ? "max-w-6xl px-1.5 py-1 sm:px-3 sm:py-2"
                 : "max-w-5xl space-y-6 p-6",
             )}
           >
@@ -497,19 +712,30 @@ export default function CarritoPage() {
                   return (
                     <Card
                       key={carrito.sigla}
-                      className="border-border bg-card shadow-[var(--shadow-card)]"
+                      className="gap-0 border-border bg-card py-0 shadow-[var(--shadow-card)]"
                     >
-                      <CardContent className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-2.5">
-                        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5 dark:bg-white/95 dark:ring-white/10 sm:h-10 sm:w-10 sm:rounded-lg sm:p-1.5">
+                      <CardContent className="flex flex-col gap-1 px-2.5 py-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3.5 sm:py-2">
+                        <div className="flex min-w-0 items-center gap-2 sm:gap-2">
+                          <div
+                            className={cn(
+                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0.5 ring-1 sm:h-9 sm:w-9 sm:rounded-lg sm:p-1",
+                              carrito.sigla === "AMI"
+                                ? "bg-[#164e63] ring-white/20 dark:bg-[#164e63]"
+                                : "bg-white ring-black/5 dark:bg-white/95 dark:ring-white/10",
+                            )}
+                          >
                             {carrito.logoSrc ? (
                               <img
                                 src={carrito.logoSrc}
                                 alt=""
-                                className="max-h-[22px] max-w-[88%] object-contain sm:max-h-[26px]"
+                                className={cn(
+                                  "max-h-[20px] max-w-[88%] object-contain sm:max-h-[22px]",
+                                  carrito.sigla === "AMI" &&
+                                    "opacity-[0.92] saturate-[0.95]",
+                                )}
                               />
                             ) : (
-                              <Building className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
+                              <Building className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" />
                             )}
                           </div>
                           <div className="min-w-0 leading-none">
@@ -542,7 +768,7 @@ export default function CarritoPage() {
                 })}
               </>
             ) : (
-              <div className="grid min-h-0 w-full min-w-0 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(248px,288px)] lg:items-start lg:gap-3">
+              <div className="grid min-h-0 w-full min-w-0 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(268px,324px)] lg:items-start lg:gap-2.5">
                 <div className="min-h-0 min-w-0 space-y-1">
                   <div className="space-y-1">
                     <h2 className="text-sm font-semibold leading-tight tracking-tight text-foreground sm:text-base">
@@ -554,7 +780,7 @@ export default function CarritoPage() {
                         <Accordion
                           type="single"
                           collapsible
-                          className="w-full px-1.5 sm:px-2.5"
+                          className="w-full px-1.5 sm:px-2.5 lg:px-2"
                         >
                           <AccordionItem value="retenciones" className="border-border">
                             <AccordionTrigger className="group -mx-1 rounded-md px-1.5 py-1.5 text-xs font-semibold transition-all duration-200 ease-out hover:translate-x-1 hover:bg-muted/45 hover:no-underline data-[state=open]:bg-muted/35 data-[state=open]:text-foreground sm:text-sm [&>svg]:size-3.5">
@@ -721,7 +947,7 @@ export default function CarritoPage() {
                                       {r.tipo} · {r.bl}
                                     </span>
                                     <span className="shrink-0">
-                                      - {r.moneda} {fmtMoneda(r.importe)}
+                                      - ARS {fmtMoneda(r.importe)}
                                     </span>
                                   </li>
                                 ))}
@@ -757,6 +983,7 @@ export default function CarritoPage() {
                   return (
                     <Card
                       key={grupo.bl}
+                      id={`carrito-bl-${grupo.bl.replace(/[^a-zA-Z0-9_-]/g, "_")}`}
                       className="overflow-hidden border-border bg-card py-0 transition-colors hover:border-primary/55"
                     >
                       <Collapsible
@@ -824,6 +1051,12 @@ export default function CarritoPage() {
                                   <p className="mt-0.5 text-muted-foreground">{obs.texto}</p>
                                 </div>
                               </div>
+                            )}
+
+                            {grupo.contratanteSigla === "APM" && (
+                              <p className="mx-2 mt-2 text-[11px] font-medium leading-snug text-muted-foreground sm:mx-2.5 sm:text-xs">
+                                Conceptos transmitidos por la terminal.
+                              </p>
                             )}
 
                             <div className="grid gap-3 border-b border-border px-2 py-2 sm:grid-cols-6 sm:gap-x-4 sm:gap-y-3 sm:px-3">
@@ -931,8 +1164,8 @@ export default function CarritoPage() {
                 </div>
 
                 <aside className="min-h-0 min-w-0 space-y-1.5 lg:sticky lg:top-11 lg:self-start">
-                  <Card className="border-primary/30 bg-primary/5 shadow-[var(--shadow-card)]">
-                    <CardContent className="space-y-1.5 p-2.5 sm:p-3">
+                  <Card className="gap-0 border-primary/30 bg-primary/5 py-0 shadow-[var(--shadow-card)]">
+                    <CardContent className="space-y-2 p-2 sm:space-y-2.5 sm:p-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-base font-semibold leading-tight tracking-tight text-foreground sm:text-lg">
@@ -949,73 +1182,55 @@ export default function CarritoPage() {
                       </div>
 
                       <div className="space-y-0.5 text-[11px] sm:text-xs sm:text-sm">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-foreground">ARS</span>
-                          <span className="shrink-0 font-mono tabular-nums text-foreground">
-                            ARS{" "}
-                            {fmtMoneda(
-                              retencionARS > 0 ? totalARS : netoARSConceptos,
-                            )}
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 text-foreground">ARS</span>
+                          <span className="whitespace-nowrap text-right font-mono tabular-nums text-foreground">
+                            ARS {fmtMoneda(detalleConceptosARS)}
                           </span>
                         </div>
-                        {retencionARS > 0 && (
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-foreground">Retenciones</span>
-                            <span className="shrink-0 font-mono tabular-nums text-foreground">
-                              - ARS {fmtMoneda(retencionARS)}
-                            </span>
-                          </div>
-                        )}
-                        {retencionARS > 0 && (
-                          <div className="flex items-center justify-between gap-2 border-b border-primary/10 pb-1.5 text-xs font-semibold text-foreground sm:text-sm">
-                            <span>Total ARS (conceptos)</span>
-                            <span className="shrink-0 font-mono tabular-nums">
-                              ARS {fmtMoneda(netoARSConceptos)}
-                            </span>
-                          </div>
-                        )}
 
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-foreground">USD</span>
-                          <span className="shrink-0 font-mono tabular-nums text-foreground">
-                            USD {fmtMoneda(totalUSD)}
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 text-foreground">USD</span>
+                          <span className="whitespace-nowrap text-right font-mono tabular-nums text-foreground">
+                            USD {fmtMoneda(detalleConceptosUSD)}
                           </span>
                         </div>
-                        {retencionUSD > 0 && (
-                          <div className="flex items-center justify-between gap-2 border-b border-primary/10 pb-1.5">
-                            <span className="text-foreground">Retenciones</span>
-                            <span className="shrink-0 font-mono tabular-nums text-foreground">
-                              - USD {fmtMoneda(retencionUSD)}
-                            </span>
-                          </div>
-                        )}
 
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-foreground">Tarifa de servicio al contado</span>
-                          <span className="shrink-0 font-mono tabular-nums text-foreground">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 text-foreground">Tarifa de servicio al contado</span>
+                          <span className="whitespace-nowrap text-right font-mono tabular-nums text-foreground">
                             ARS {fmtMoneda(TARIFA_SERVICIO_APC_CONTADO_ARS)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-foreground">Tarifa de servicio cuenta corriente</span>
-                          <span className="shrink-0 font-mono tabular-nums text-foreground">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 text-foreground">Tarifa de servicio cuenta corriente</span>
+                          <span className="whitespace-nowrap text-right font-mono tabular-nums text-foreground">
                             ARS {fmtMoneda(TARIFA_SERVICIO_APC_CTA_CTE_ARS)}
                           </span>
                         </div>
+
+                        {retencionesTotalARS > 0 && (
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5 border-t border-primary/10 pt-1.5">
+                            <span className="min-w-0 text-foreground">Retenciones</span>
+                            <span className="whitespace-nowrap text-right font-mono tabular-nums text-foreground">
+                              - ARS {fmtMoneda(retencionesTotalARS)}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="border-t border-primary/20 pt-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-bold text-foreground sm:text-base">Total ARS</span>
-                          <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-foreground sm:text-lg">
-                            ARS {fmtMoneda(netoARSConApc)}
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 text-sm font-bold text-foreground sm:text-base">Total ARS</span>
+                          <span className="whitespace-nowrap text-right font-mono text-sm font-bold tabular-nums text-foreground sm:text-lg">
+                            ARS {fmtMoneda(totalDetalleImporteARS)}
                           </span>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <div className="rounded-xl border-2 border-red-500/45 bg-card p-2.5 shadow-sm dark:border-red-500/35 sm:p-3">
+                  <div className="rounded-xl border-2 border-red-500/45 bg-card p-2 shadow-sm dark:border-red-500/35 sm:p-3">
                     <div className="space-y-2">
                       <div>
                         <h3 className="text-sm font-bold leading-tight text-foreground sm:text-base">Pagá con</h3>
@@ -1069,7 +1284,7 @@ export default function CarritoPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {medioSeleccionado?.requiereAgenda ? (
-                              agendasPagosAutomaticos.map((a) => (
+                              opcionesAgendaAutomatica.map((a) => (
                                 <SelectItem key={a.value} value={a.value}>
                                   {a.label}
                                 </SelectItem>
@@ -1081,6 +1296,23 @@ export default function CarritoPage() {
                             )}
                           </SelectContent>
                         </Select>
+                        {medioSeleccionado?.requiereAgenda &&
+                          opcionesAgendaAutomatica.length === 0 && (
+                            <p className="text-[10px] leading-snug text-muted-foreground">
+                              No tenés agendas guardadas para este medio. Podés darlas de alta en{" "}
+                              <Link
+                                href={
+                                  medioPago === "debin"
+                                    ? "/dashboard/agendas?tab=debin"
+                                    : "/dashboard/agendas?tab=interbanking"
+                                }
+                                className="font-medium text-primary underline-offset-4 hover:underline"
+                              >
+                                Agendas
+                              </Link>
+                              .
+                            </p>
+                          )}
                       </div>
                     </div>
 
@@ -1124,7 +1356,7 @@ export default function CarritoPage() {
                       </div>
                     </div>
 
-                    {!puedeGenerar && itemsCheckout.length > 0 && (
+                    {checkoutSigla && faltaDatosPagoCheckout && itemsCheckout.length > 0 && (
                       <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/12 px-2 py-1.5 dark:bg-amber-500/15 sm:px-2.5 sm:py-1.5">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-500" />
                         <p className="text-xs leading-snug text-foreground">
@@ -1154,74 +1386,146 @@ export default function CarritoPage() {
       )}
 
       <Dialog open={confirmOpen} onOpenChange={(o) => !generando && setConfirmOpen(o)}>
-        <DialogContent className="border-white/10 bg-card sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar transacción</DialogTitle>
-            <DialogDescription>
-              Vas a solicitar la <span className="font-medium text-foreground">Anticipada</span> para{" "}
-              <span className="font-medium text-foreground">{checkoutNombre}</span>. El sistema puede
-              tardar en generar la Boleta de Transacción Web; cuando esté lista, la recibirás por mail
-              y podrás verla en Mis Gestiones.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="gap-0 overflow-x-hidden rounded-2xl border border-border/70 bg-card p-0 shadow-2xl shadow-black/20 ring-1 ring-white/10 dark:bg-card dark:ring-white/5 sm:max-w-lg">
+          <div
+            className="h-1.5 w-full shrink-0 bg-gradient-to-r from-pink-500 via-emerald-500 to-teal-500 dark:from-pink-600 dark:via-emerald-600 dark:to-teal-600"
+            aria-hidden
+          />
 
-          <div className="space-y-3 rounded-lg border border-border bg-background/40 p-4 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">BLs incluidos</span>
-              <span className="font-semibold text-foreground">{gruposBlCheckout.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Conceptos</span>
-              <span className="font-semibold text-foreground">{itemsCheckout.length}</span>
-            </div>
-            {netoUSD > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total USD</span>
-                <span className="font-mono font-semibold text-foreground">
-                  USD {fmtMoneda(netoUSD)}
-                </span>
+          <div className="space-y-4 px-5 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-6">
+            <DialogHeader className="gap-0 space-y-0 text-left">
+              <div className="flex gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-emerald-500/15 ring-1 ring-pink-500/25 dark:from-pink-500/15 dark:to-emerald-500/10 dark:ring-pink-500/20">
+                  <ClipboardCheck className="h-6 w-6 text-pink-700 dark:text-pink-400" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                  <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                    Confirmar transacción
+                  </DialogTitle>
+                  <DialogDescription className="text-left text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
+                    Vas a solicitar la <span className="font-semibold text-foreground">Anticipada</span>{" "}
+                    para{" "}
+                    <span className="font-semibold text-foreground">{checkoutNombre}</span>. El sistema
+                    puede tardar en generar la Boleta de Transacción Web; cuando esté lista, la
+                    recibirás por mail y podrás verla en{" "}
+                    <span className="font-semibold text-foreground">Mis Gestiones</span>.
+                  </DialogDescription>
+                </div>
               </div>
-            )}
-            {(netoARSConceptos > 0 ||
-              TARIFA_SERVICIO_APC_CONTADO_ARS > 0 ||
-              TARIFA_SERVICIO_APC_CTA_CTE_ARS > 0) && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total ARS (incl. APC)</span>
-                <span className="font-mono font-semibold text-foreground">
-                  ARS {fmtMoneda(netoARSConApc)}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Medio de pago</span>
-              <span className="font-semibold text-foreground">
-                {medioSeleccionado?.label ?? "—"}
-              </span>
+            </DialogHeader>
+
+            <div className="rounded-xl border border-border/60 bg-muted/35 px-4 py-3.5 dark:bg-muted/20">
+              <p className="text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
+                Revisá los datos antes de continuar. Esta acción prepara el cobro según el medio y la
+                agenda seleccionados.
+              </p>
             </div>
-            {medioSeleccionado?.requiereAgenda &&
-              agendaPagoAutomatico &&
-              agendaPagoAutomatico !== AGENDA_AUTOMATICA_NO_APLICA && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Agenda pago automático</span>
-                  <span className="max-w-[55%] text-right font-semibold text-foreground">
-                    {agendasPagosAutomaticos.find((a) => a.value === agendaPagoAutomatico)
-                      ?.label ?? "—"}
+
+            <div className="overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-background via-muted/15 to-muted/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] dark:from-background dark:via-muted/10 dark:to-muted/25 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+              <div className="border-b border-border/40 bg-muted/40 px-4 py-2.5 dark:bg-muted/25">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Detalle
+                </p>
+              </div>
+
+              <div className="divide-y divide-border/35">
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                    <Layers className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                    BLs incluidos
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {gruposBlCheckout.length}
                   </span>
                 </div>
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                    <ListOrdered className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                    Conceptos
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {itemsCheckout.length}
+                  </span>
+                </div>
+              </div>
+
+              {(netoUSD > 0 || totalDetalleImporteARS > 0) && (
+                <div className="border-t border-border/40 bg-emerald-500/[0.06] px-4 py-3.5 dark:bg-emerald-500/[0.07]">
+                  <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800/90 dark:text-emerald-400/90">
+                    Importes
+                  </p>
+                  <div className="space-y-2">
+                    {netoUSD > 0 && (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-[13px] text-muted-foreground">Total USD</span>
+                        <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                          USD {fmtMoneda(netoUSD)}
+                        </span>
+                      </div>
+                    )}
+                    {(totalDetalleImporteARS > 0 || netoUSD > 0) && (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-[13px] text-muted-foreground">Total ARS (incl. APC)</span>
+                        <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                          ARS {fmtMoneda(totalDetalleImporteARS)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Notificar a</span>
-              <span className="max-w-[55%] truncate font-semibold text-foreground">
-                {agendaMail}
-              </span>
+
+              <div className="border-t border-border/35 px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <span className="flex shrink-0 items-center gap-2 pt-0.5 text-[13px] text-muted-foreground">
+                    <Wallet className="h-4 w-4 opacity-70" aria-hidden />
+                    Medio de pago
+                  </span>
+                  <span className="max-w-[58%] text-right text-sm font-semibold leading-snug text-foreground">
+                    {medioSeleccionado?.label ?? "—"}
+                  </span>
+                </div>
+                {medioSeleccionado?.requiereAgenda &&
+                  agendaPagoAutomatico &&
+                  agendaPagoAutomatico !== AGENDA_AUTOMATICA_NO_APLICA && (
+                    <div className="mt-3 flex items-start justify-between gap-4 border-t border-border/30 pt-3">
+                      <span className="flex shrink-0 items-center gap-2 pt-0.5 text-[13px] text-muted-foreground">
+                        <CreditCard className="h-4 w-4 opacity-70" aria-hidden />
+                        Agenda automática
+                      </span>
+                      <span className="max-w-[58%] whitespace-pre-wrap break-words text-right text-xs font-semibold leading-snug text-foreground sm:text-sm">
+                        {opcionesAgendaAutomatica.find((a) => a.value === agendaPagoAutomatico)
+                          ?.label ?? "—"}
+                      </span>
+                    </div>
+                  )}
+                <div className="mt-3 flex items-start justify-between gap-4 border-t border-border/30 pt-3">
+                  <span className="flex shrink-0 items-center gap-2 pt-0.5 text-[13px] text-muted-foreground">
+                    <Mail className="h-4 w-4 opacity-70" aria-hidden />
+                    Notificar a
+                  </span>
+                  <span className="max-w-[58%] break-all text-right text-sm font-semibold leading-snug text-foreground">
+                    {agendaMail}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={generando}>
+          <DialogFooter className="gap-2 border-t border-border/50 bg-muted/25 px-5 py-4 sm:px-6 dark:bg-muted/15">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border/80"
+              onClick={() => setConfirmOpen(false)}
+              disabled={generando}
+            >
               Volver
             </Button>
-            <Button onClick={handleGenerar} disabled={generando}>
+            <Button
+              className="rounded-xl bg-pink-600 font-semibold text-white hover:bg-pink-700 dark:bg-pink-600 dark:hover:bg-pink-500"
+              onClick={handleGenerar}
+              disabled={generando}
+            >
               {generando ? "Enviando..." : "Confirmar y generar"}
             </Button>
           </DialogFooter>
@@ -1229,36 +1533,72 @@ export default function CarritoPage() {
       </Dialog>
 
       <Dialog open={boletaProcesoOpen} onOpenChange={setBoletaProcesoOpen}>
-        <DialogContent className="border-white/10 bg-card sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Solicitud registrada</DialogTitle>
-            <DialogDescription className="text-left text-sm leading-relaxed text-muted-foreground">
-              {ultimaOperacionContratante && (
-                <span className="mb-2 block font-medium text-foreground">
-                  Operación · {ultimaOperacionContratante}
-                </span>
-              )}
-              La Boleta de Transacción Web no está disponible al instante: el sistema la genera
-              después de crear la operación. Te notificaremos al mail de tu agenda cuando esté lista.
-              Podés seguir el estado en{" "}
-              <span className="font-medium text-foreground">Mis Gestiones</span>, según la{" "}
-              <a
-                href="https://www.gestion-online.com.ar/v3/Guias/Guia-para-operar-en-la-web/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                guía oficial
-              </a>
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setBoletaProcesoOpen(false)}>
+        <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-0 shadow-2xl shadow-black/20 ring-1 ring-white/10 dark:bg-card dark:ring-white/5 sm:max-w-md">
+          <div
+            className="h-1.5 w-full shrink-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-600 dark:via-teal-600 dark:to-cyan-600"
+            aria-hidden
+          />
+
+          <div className="space-y-4 px-5 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-6">
+            <DialogHeader className="gap-0 space-y-0 text-left">
+              <div className="flex gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/15 ring-1 ring-emerald-500/30 dark:from-emerald-500/15 dark:to-teal-500/10 dark:ring-emerald-500/25">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-700 dark:text-emerald-400" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                  <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                    Transacción generada con éxito.
+                  </DialogTitle>
+                  <DialogDescription className="space-y-2 text-left text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
+                    {ultimaOperacionContratante && (
+                      <span className="block font-semibold leading-snug text-foreground">
+                        Operación · {ultimaOperacionContratante}
+                      </span>
+                    )}
+                    <span className="block">
+                      La Boleta de Transacción Web no está disponible al instante: el sistema la genera
+                      después de crear la operación. Te notificaremos al mail seleccionado de tu agenda
+                      cuando esté lista. Podés seguir el estado en{" "}
+                      <span className="font-semibold text-foreground">Mis Gestiones</span>.
+                    </span>
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/40 via-muted/25 to-background p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:from-muted/30 dark:via-muted/15 dark:to-background">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Próximos pasos
+              </p>
+              <ul className="mt-3 space-y-2 text-[13px] leading-snug text-muted-foreground sm:text-sm">
+                <li className="flex gap-2">
+                  <span
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+                    aria-hidden
+                  />
+                  Revisá tu correo cuando informemos que la boleta está lista.
+                </li>
+                <li className="flex gap-2">
+                  <span
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+                    aria-hidden
+                  />
+                  Consultá el avance en Mis Gestiones cuando lo necesites.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 border-t border-border/50 bg-muted/25 px-5 py-4 sm:px-6 dark:bg-muted/15 sm:flex-row">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border/80"
+              onClick={() => setBoletaProcesoOpen(false)}
+            >
               Cerrar
             </Button>
             <Button
-              className="gap-2"
+              className="gap-2 rounded-xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
               onClick={() => {
                 setBoletaProcesoOpen(false);
                 router.push("/dashboard/mis-gestiones");

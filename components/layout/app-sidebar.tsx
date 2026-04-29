@@ -39,6 +39,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+/** Guías oficiales (misma URL que el ítem del menú lateral «Instructivos»). */
+const INSTRUCTIVOS_GUIAS_URL = "https://www.gestion-online.com.ar/v3/Guias/INSTRUCTIVOS/";
+
 type MenuItem = {
   title: string;
   url: string;
@@ -55,7 +58,7 @@ const menuItems: MenuItem[] = [
   { title: "Inicio", url: "/dashboard", icon: Home, dashboardHome: true },
   {
     title: "Instructivos",
-    url: "https://www.gestion-online.com.ar/v3/Guias/INSTRUCTIVOS/",
+    url: INSTRUCTIVOS_GUIAS_URL,
     icon: BookOpen,
     external: true,
   },
@@ -164,18 +167,43 @@ export function AppSidebar() {
             const isCarrito = item.url === "/dashboard/carrito";
 
             const itemClassName = cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300",
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              /* Mismo aspecto que el hover del ítem cuando no está activo (sin anillo). */
-              cartHighlight && isCarrito && !isActive && "bg-sidebar-accent text-sidebar-foreground",
+              cartHighlight &&
+                isCarrito &&
+                !isActive &&
+                "bg-emerald-500/15 text-emerald-900 ring-1 ring-emerald-500/40 dark:bg-emerald-500/[0.18] dark:text-emerald-100 dark:ring-emerald-500/45",
+              cartHighlight && isCarrito && isActive && "ring-2 ring-emerald-400/60 ring-offset-2 ring-offset-sidebar dark:ring-emerald-400/50",
             );
 
             const itemContent = (
               <>
-                <item.icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.title}</span>}
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    cartHighlight && isCarrito && "text-emerald-700 dark:text-emerald-300",
+                  )}
+                />
+                {!collapsed && (
+                  <>
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate",
+                        cartHighlight && isCarrito &&
+                          "font-semibold text-emerald-900 dark:text-emerald-50",
+                      )}
+                    >
+                      {item.title}
+                    </span>
+                    {cartHighlight && isCarrito && (
+                      <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm dark:bg-emerald-500">
+                        Agregado
+                      </span>
+                    )}
+                  </>
+                )}
               </>
             );
 
@@ -215,7 +243,7 @@ export function AppSidebar() {
                 >
                   <TooltipTrigger asChild>{NavItem}</TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8} className={tooltipContentClass}>
-                    {item.title}
+                    {cartHighlight && isCarrito ? "Agregado al carrito" : item.title}
                   </TooltipContent>
                 </Tooltip>
               );
@@ -362,8 +390,16 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Instructivos</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Verificá los <span className="font-medium text-emerald-400">instructivos para operar en la web</span> —
-                encontrarás guías paso a paso para consultar BLs, agregar gastos al carrito
+                Verificá los{" "}
+                <a
+                  href={INSTRUCTIVOS_GUIAS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-emerald-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+                >
+                  instructivos para operar en la web
+                </a>{" "}
+                — encontrarás guías paso a paso para consultar BLs, agregar gastos al carrito
                 y generar tu anticipada online.
               </p>
             </div>
@@ -377,10 +413,17 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Medios de Pago</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                En la sección <span className="font-medium text-blue-400">Medios de Pago</span> del
-                dashboard figuran todos los métodos disponibles junto con los
-                <span className="font-medium text-foreground"> datos bancarios</span> necesarios
-                para realizar tus pagos.
+                En la sección{" "}
+                <a
+                  href={INSTRUCTIVOS_GUIAS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+                >
+                  Medios de Pago
+                </a>{" "}
+                del instructivo figuran todos los métodos disponibles junto con los datos bancarios
+                necesarios para realizar tus pagos.
               </p>
             </div>
           </div>

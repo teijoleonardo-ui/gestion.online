@@ -230,10 +230,10 @@ export default function ConfiguracionPage() {
                 {isSuccess && (
                   <div
                     role="status"
-                    className="flex items-start gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-300"
+                    className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-300 dark:border-emerald-800/70 dark:bg-emerald-950/40"
                   >
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
-                    <p className="text-sm font-medium leading-snug text-emerald-50">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
+                    <p className="text-sm font-medium leading-snug text-emerald-950 dark:text-emerald-50">
                       Tu contraseña se actualizó correctamente. Vas a poder usarla
                       la próxima vez que inicies sesión.
                     </p>
@@ -243,10 +243,10 @@ export default function ConfiguracionPage() {
                 {feedback.type === "error" && (
                   <div
                     role="alert"
-                    className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-300"
+                    className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-300 dark:border-rose-900/70 dark:bg-rose-950/35"
                   >
-                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" />
-                    <p className="text-sm font-medium leading-snug text-rose-50">
+                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <p className="text-sm font-medium leading-snug text-rose-950 dark:text-rose-50">
                       {ERROR_MESSAGES[feedback.code]}
                     </p>
                   </div>

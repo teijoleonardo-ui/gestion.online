@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   ShoppingCart,
@@ -9,6 +10,8 @@ import {
   AlertCircle,
   Ship,
   CheckCircle2,
+  Trash2,
+  CheckSquare,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,11 @@ import {
   totalesPorMoneda,
 } from "@/lib/consultaGastosTipos";
 import { dispatchCartAdded } from "@/lib/cart-events";
+import { appendConsultaConceptosToCart } from "@/lib/cart-storage";
+import {
+  APM_DRAFT_CHECKOUT_SESSION_KEY,
+  type ApmDraftCheckoutSession,
+} from "@/lib/apm-draft-checkout";
 
 type FiltroConceptosModal = "todos" | GastoConceptoTipo;
 
@@ -49,6 +57,30 @@ function formatFechaConcepto(fecha: string): string {
   const d = new Date(`${t}T12:00:00`);
   return Number.isNaN(d.getTime()) ? t : d.toLocaleDateString("es-AR");
 }
+
+/** Carteles de estado (borde + fondo suave); evitan confundirse con botones de acción sólidos. */
+const cartelError =
+  "flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium leading-snug text-rose-900 shadow-sm dark:border-rose-900/70 dark:bg-rose-950/35 dark:text-rose-50";
+const cartelExito =
+  "flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium leading-snug text-emerald-950 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-50";
+const cartelInfo =
+  "flex items-start gap-3 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium leading-snug text-teal-950 shadow-sm dark:border-teal-800/70 dark:bg-teal-950/35 dark:text-teal-50";
+
+const APM_STORAGE_DRAFTS = "consulta-apm-drafts-v1";
+
+type ApmDraftGuardado = {
+  id: string;
+  numeroDraft: string;
+  importeARS: number;
+  cuitFacturacion: string;
+  bl: string;
+  contenedor: string;
+  /** Gastos de terminal guardados al generar el draft (para Ir a pagar / carrito). */
+  conceptos: GastoConcepto[];
+};
+
+/** TC mock para pasar USD→ARS en drafts APM (API real reemplazará el importe). */
+const APM_MOCK_TC_ARS_USD = 1450;
 
 /** Metadatos de respuesta (mock); con API real vendrían del backend. */
 const mockResultadoComún = {
@@ -376,7 +408,15 @@ function sentidoCargaDesdeOpcion(op: FormOpcion | ""): string {
   return "—";
 }
 
+/** Etiqueta de movimiento alineada a instructivos Terminal 4 (capturas). */
+function movimientoAPM(op: FormOpcion | ""): string {
+  if (op === "importacion") return "IMPRT";
+  if (op === "exportacion") return "EXPO";
+  return "—";
+}
+
 export function ConsultaContratantePanel({ contratanteParam }: { contratanteParam: string }) {
+  const router = useRouter();
   const sigla = contratanteParam.trim().toUpperCase();
   const contratante = contratantesConfig[sigla] ?? contratantesConfig.DEFAULT;
 
@@ -405,6 +445,26 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
   const [cartelCarritoEnFormulario, setCartelCarritoEnFormulario] = useState(false);
   const cartelCarritoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Flujo Terminal 4 (APM): revisión oculta tras generar draft; cartel verde en formulario; drafts persistidos. */
+  const [apmOcultarResultadosTrasDraft, setApmOcultarResultadosTrasDraft] = useState(false);
+  const [apmDraftBannerOk, setApmDraftBannerOk] = useState(false);
+  const [apmDrafts, setApmDrafts] = useState<ApmDraftGuardado[]>(() => {
+    if (typeof window === "undefined") return [];
+    if (sigla !== "APM") return [];
+    try {
+      const raw = localStorage.getItem(APM_STORAGE_DRAFTS);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as ApmDraftGuardado[];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((p) => ({
+        ...p,
+        conceptos: Array.isArray(p.conceptos) ? p.conceptos : [],
+      }));
+    } catch {
+      return [];
+    }
+  });
+
   const openConceptosModal = (filtro: FiltroConceptosModal) => {
     setConceptosDialogFiltro(filtro);
     setConceptosDialogOpen(true);
@@ -418,12 +478,14 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
   useEffect(() => {
     if (busquedaExitoTick === 0) return;
     requestAnimationFrame(() => {
-      document
-        .getElementById("consulta-resultados")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      flashSectionSpotlightAfterScroll("consulta-resultados");
+      const anchor =
+        opcion === "drafts_generados" && sigla === "APM"
+          ? "consulta-drafts-apm"
+          : "consulta-resultados";
+      document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      flashSectionSpotlightAfterScroll(anchor);
     });
-  }, [busquedaExitoTick]);
+  }, [busquedaExitoTick, opcion, sigla]);
 
   useEffect(() => {
     return () => {
@@ -431,7 +493,17 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
     };
   }, []);
 
+  useEffect(() => {
+    if (sigla !== "APM") return;
+    try {
+      localStorage.setItem(APM_STORAGE_DRAFTS, JSON.stringify(apmDrafts));
+    } catch {
+      /* ignore */
+    }
+  }, [sigla, apmDrafts]);
+
   const handleAgregarAlCarrito = () => {
+    appendConsultaConceptosToCart(conceptosConsulta, bl, sigla);
     dispatchCartAdded();
     setConceptosDialogOpen(false);
     setGastosOcultosTrasCarrito(true);
@@ -474,20 +546,104 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
     !!opcion &&
     fieldsActivos.every((k) => (fieldValues[k] ?? "").toString().trim() !== "");
 
+  const apmMetaMock = useMemo(() => {
+    const seed = (bl.trim() || "BL").slice(0, 12);
+    const alnum = seed.replace(/\W/g, "") || "000001";
+    return {
+      linea: seed.length >= 3 ? seed.slice(0, 3).toUpperCase() : "MSK",
+      nroCoord: `COORD-${alnum.slice(0, 8)}`,
+      fechaCoord: "2026-01-06 13:00:00",
+      vtoLibreDeuda: "2026-01-06 23:59:59",
+    };
+  }, [bl, busquedaExitoTick]);
+
+  const esApm = sigla === "APM";
+  const showResultadosConsulta =
+    searched &&
+    !noResults &&
+    !gastosOcultosTrasCarrito &&
+    !(esApm && apmOcultarResultadosTrasDraft) &&
+    opcion !== "drafts_generados";
+
+  const showApmDraftsLista = searched && esApm && opcion === "drafts_generados";
+
+  const irAPagarDraftApm = (d: ApmDraftGuardado) => {
+    const conceptos =
+      d.conceptos && d.conceptos.length > 0 ? d.conceptos : getMockConceptosConsulta();
+    const payload: ApmDraftCheckoutSession = {
+      numeroDraft: d.numeroDraft,
+      bl: d.bl.trim() || "—",
+      contenedor: d.contenedor,
+      cuitFacturacion: d.cuitFacturacion,
+      conceptos,
+    };
+    try {
+      sessionStorage.setItem(APM_DRAFT_CHECKOUT_SESSION_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore */
+    }
+    router.push("/dashboard/carrito");
+  };
+
+  const handleGenerarDraftAPM = () => {
+    const { usd, ars } = totalesPorMoneda(conceptosConsulta);
+    const importeARS = ars + usd * APM_MOCK_TC_ARS_USD;
+    const numeroDraft = String(Math.floor(1_500_000 + Math.random() * 8_999_999));
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `draft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    setApmDrafts((prev) => [
+      {
+        id,
+        numeroDraft,
+        importeARS,
+        cuitFacturacion: cuitFacturar.trim() || "—",
+        bl: bl.trim() || "—",
+        contenedor: nroContenedor.trim() || "—",
+        conceptos: conceptosConsulta.map((c) => ({ ...c })),
+      },
+      ...prev,
+    ]);
+    setApmOcultarResultadosTrasDraft(true);
+    setApmDraftBannerOk(true);
+  };
+
   const handleSearch = () => {
     if (!canSearch) return;
-    const invalid = bl.toLowerCase().includes("xxx");
+
+    if (opcion === "drafts_generados") {
+      setSearched(true);
+      setNoResults(false);
+      setConceptosConsulta([]);
+      setGastosOcultosTrasCarrito(false);
+      setApmOcultarResultadosTrasDraft(false);
+      setApmDraftBannerOk(false);
+      setExitoConsultaEn(null);
+      setBusquedaExitoTick((t) => t + 1);
+      return;
+    }
+
+    const blLower = bl.toLowerCase();
+    const invalid =
+      esApm &&
+      (blLower.includes("xxx") || blLower.includes("nodatos"));
+    const invalidOtros = !esApm && blLower.includes("xxx");
+
     setSearched(true);
-    setNoResults(invalid);
-    if (invalid) {
+    setNoResults(invalid || invalidOtros);
+    setApmOcultarResultadosTrasDraft(false);
+    setApmDraftBannerOk(false);
+
+    if (invalid || invalidOtros) {
       setExitoConsultaEn(null);
       setConceptosConsulta([]);
       return;
     }
+
     setGastosOcultosTrasCarrito(false);
     setExitoConsultaEn(new Date());
     setBusquedaExitoTick((t) => t + 1);
-    // Backend: setConceptosConsulta(data.conceptos) a partir de ConsultaGastosApiResponse
     setConceptosConsulta(getMockConceptosConsulta());
   };
 
@@ -752,24 +908,24 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
               </Button>
 
               {searched && noResults && (
-                <div
-                  role="alert"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-md shadow-rose-950/30 dark:bg-rose-600 dark:shadow-rose-950/45"
-                >
-                  <AlertCircle className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+                <div role="alert" className={cartelError}>
+                  <AlertCircle
+                    className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400"
+                    aria-hidden
+                  />
                   <span>No existe información para tu búsqueda</span>
                 </div>
               )}
 
-              {searched && !noResults && exitoConsultaEn && !gastosOcultosTrasCarrito && (
-                <div
-                  role="status"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-md shadow-emerald-950/25 dark:bg-emerald-500 dark:shadow-emerald-950/40"
-                >
-                  <CheckCircle2 className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+              {searched && !noResults && exitoConsultaEn && !gastosOcultosTrasCarrito && sigla !== "APM" && (
+                <div role="status" className={cartelExito}>
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+                    aria-hidden
+                  />
                   <span>
                     Consulta realizada con éxito{" "}
-                    <span className="font-medium opacity-95">
+                    <span className="font-medium text-emerald-900 dark:text-emerald-200">
                       {exitoConsultaEn.toLocaleString("es-AR", {
                         dateStyle: "short",
                         timeStyle: "medium",
@@ -779,17 +935,27 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
                 </div>
               )}
 
-              {cartelCarritoEnFormulario && (
-                <div
-                  role="status"
-                  aria-live="polite"
-                  className="rounded-full border border-teal-500/40 bg-teal-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-md dark:bg-teal-600"
-                >
-                  Agregado correctamente al carrito
+              {apmDraftBannerOk && (
+                <div role="status" aria-live="polite" className={cartelExito}>
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+                    aria-hidden
+                  />
+                  <span>Draft generado correctamente</span>
                 </div>
               )}
 
-              {!contratante.hideCotizacion && !gastosOcultosTrasCarrito && (
+              {cartelCarritoEnFormulario && (
+                <div role="status" aria-live="polite" className={cartelInfo}>
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400"
+                    aria-hidden
+                  />
+                  <span>Agregado correctamente al carrito</span>
+                </div>
+              )}
+
+              {!contratante.hideCotizacion && !gastosOcultosTrasCarrito && opcion !== "drafts_generados" && (
                 <CotizacionDialog
                   contratanteSigla={contratante.subtitle}
                   contratanteTitle={contratante.title}
@@ -803,8 +969,100 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
           </Card>
         </div>
 
-        {/* Results — estructura alineada a “Revisá los datos” (web actual) */}
-        {searched && !noResults && !gastosOcultosTrasCarrito && (
+        {/* Terminal 4 (APM): datos del formulario + gastos + generar draft */}
+        {showResultadosConsulta && sigla === "APM" && (
+          <section id="consulta-resultados" className="scroll-mt-24 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Revisá los datos
+              </h2>
+              <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground max-w-3xl">
+                <li>
+                  Los valores de tu consulta reflejan lo cargado en el formulario y la respuesta de
+                  la terminal.
+                </li>
+                <li>Si la terminal transmitió gastos, los vas a ver en el detalle para continuar.</li>
+                <li>Podés generar el draft para seguir la operativa de pago de Terminal 4.</li>
+              </ul>
+            </div>
+
+            <div className="max-w-3xl space-y-6">
+              <Card className="border-border bg-card overflow-hidden">
+                <CardHeader className="space-y-1 pb-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background shadow-sm ring-1 ring-border">
+                        {contratante.logoSrc ? (
+                          <img
+                            src={contratante.logoSrc}
+                            alt=""
+                            className="h-9 w-9 object-contain"
+                          />
+                        ) : (
+                          <Ship className="h-6 w-6 text-primary" aria-hidden />
+                        )}
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-semibold">Tu item</CardTitle>
+                        <CardDescription>{contratante.title}</CardDescription>
+                      </div>
+                    </div>
+                    {conceptosConsulta.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto shrink-0 px-0 text-primary hover:bg-transparent hover:underline sm:text-right"
+                        onClick={() => openConceptosModal("todos")}
+                      >
+                        Ver gastos transmitidos
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(0,160px)_1fr]">
+                    <dt className="text-muted-foreground">Movimiento</dt>
+                    <dd className="font-semibold text-foreground">{movimientoAPM(opcion)}</dd>
+                    <dt className="text-muted-foreground">Cuit</dt>
+                    <dd className="font-mono tabular-nums text-foreground">
+                      {cuitFacturar.trim() || "—"}
+                    </dd>
+                    <dt className="text-muted-foreground">Contenedor</dt>
+                    <dd className="font-medium text-foreground break-all">
+                      {nroContenedor.trim() || "—"}
+                    </dd>
+                    <dt className="text-muted-foreground">Número de bill of lading</dt>
+                    <dd className="font-medium text-foreground break-all">
+                      {bl.trim() ? bl.toUpperCase() : "—"}
+                    </dd>
+                    <dt className="text-muted-foreground">Línea</dt>
+                    <dd className="font-medium text-foreground">{apmMetaMock.linea}</dd>
+                    <dt className="text-muted-foreground">Número de coordinación</dt>
+                    <dd className="font-mono text-sm text-foreground">{apmMetaMock.nroCoord}</dd>
+                    <dt className="text-muted-foreground">Fecha de coordinación</dt>
+                    <dd className="font-medium text-foreground">{apmMetaMock.fechaCoord}</dd>
+                    <dt className="text-muted-foreground">Vencimiento de libre deuda</dt>
+                    <dd className="font-medium text-foreground">{apmMetaMock.vtoLibreDeuda}</dd>
+                  </dl>
+
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="h-12 w-full gap-2"
+                    onClick={handleGenerarDraftAPM}
+                    disabled={conceptosConsulta.length === 0}
+                  >
+                    Generar draft
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+        )}
+
+        {/* Otros contratantes — estructura “Revisá los datos” (web actual) */}
+        {showResultadosConsulta && sigla !== "APM" && (
           <section id="consulta-resultados" className="scroll-mt-24 space-y-6">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground">
@@ -1037,8 +1295,10 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
                 </Card>
               </aside>
             </div>
+          </section>
+        )}
 
-            <Dialog
+        <Dialog
               open={conceptosDialogOpen}
               onOpenChange={(open) => {
                 setConceptosDialogOpen(open);
@@ -1065,7 +1325,7 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
                       )}
                     </span>
                     <span className="block text-muted-foreground">
-                      Conceptos transmitidos por la agencia.
+                      Conceptos transmitidos por {sigla === "APM" ? "la terminal" : "la agencia"}.
                     </span>
                   </DialogDescription>
                 </DialogHeader>
@@ -1133,6 +1393,107 @@ export function ConsultaContratantePanel({ contratanteParam }: { contratantePara
                 </div>
               </DialogContent>
             </Dialog>
+
+        {showApmDraftsLista && (
+          <section id="consulta-drafts-apm" className="scroll-mt-24 space-y-6">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Drafts generados
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Drafts creados en esta plataforma. Podés ir a pagar, descargar o borrar cada uno.
+              </p>
+            </div>
+            {apmDrafts.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  Todavía no tenés drafts generados desde esta consulta.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {apmDrafts.map((d) => (
+                  <Card key={d.id} className="border-border bg-card shadow-sm">
+                    <CardHeader className="space-y-2 pb-1">
+                      <div className="flex h-14 w-full items-center justify-center rounded-lg border border-border bg-white px-3 py-2 dark:bg-background">
+                        {contratante.logoSrc ? (
+                          <img
+                            src={contratante.logoSrc}
+                            alt=""
+                            className="h-10 max-h-full max-w-[180px] w-auto object-contain object-center"
+                          />
+                        ) : null}
+                      </div>
+                      <p className="-mt-0.5 text-center text-base font-bold leading-tight tracking-tight text-neutral-950 dark:text-neutral-50">
+                        <span>Draft número:</span>{" "}
+                        <span className="tabular-nums">{d.numeroDraft}</span>
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-2.5 pt-1">
+                      <div className="grid grid-cols-1 gap-x-5 gap-y-2 text-sm sm:grid-cols-2 sm:items-start">
+                        <p className="min-w-0 leading-snug">
+                          <span className="font-semibold text-neutral-950 dark:text-neutral-50">
+                            Importe:
+                          </span>{" "}
+                          <span className="tabular-nums text-foreground">
+                            {d.importeARS.toLocaleString("es-AR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </p>
+                        <p className="min-w-0 break-words leading-snug">
+                          <span className="font-semibold text-neutral-950 dark:text-neutral-50">
+                            Bill of lading:
+                          </span>{" "}
+                          <span className="text-foreground">{d.bl}</span>
+                        </p>
+                        <div className="min-w-0">
+                          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5 text-sm leading-snug">
+                            <span className="shrink-0 pt-px font-semibold text-neutral-950 dark:text-neutral-50">
+                              Facturado a:
+                            </span>
+                            <span className="min-w-0 break-words text-sm text-foreground leading-relaxed [overflow-wrap:anywhere]">
+                              {d.cuitFacturacion}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="min-w-0 break-all leading-snug">
+                          <span className="font-semibold text-neutral-950 dark:text-neutral-50">
+                            Contenedor:
+                          </span>{" "}
+                          <span className="font-mono text-foreground">{d.contenedor}</span>
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-center gap-2"
+                          type="button"
+                          onClick={() => irAPagarDraftApm(d)}
+                        >
+                          <CheckSquare className="h-4 w-4 shrink-0" aria-hidden />
+                          Ir a pagar
+                        </Button>
+                        <Button variant="outline" className="w-full justify-center gap-2" type="button">
+                          <Download className="h-4 w-4 shrink-0" aria-hidden />
+                          Descargar draft
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-center gap-2 text-destructive hover:text-destructive"
+                          type="button"
+                          onClick={() => setApmDrafts((prev) => prev.filter((x) => x.id !== d.id))}
+                        >
+                          <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                          Borrar draft
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </div>
