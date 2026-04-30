@@ -490,7 +490,7 @@ export default function DashboardPage() {
           </div>
  
           <div className="mx-auto w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 xl:grid-cols-5">
+            <div className="grid w-full gap-2 max-lg:[grid-template-columns:repeat(auto-fill,minmax(min(100%,10.5rem),1fr))] max-lg:gap-3 lg:grid-cols-4 lg:gap-2.5 xl:grid-cols-5">
               {contratantes.map((c) => {
                 const usesHoverBluePlate = c.sigla === "AMI";
                 const needsReadablePlate = c.sigla === "SDC" || c.sigla === "APM";
@@ -504,13 +504,18 @@ export default function DashboardPage() {
                     onClick={() =>
                       router.push(`/dashboard/consulta-bl?contratante=${encodeURIComponent(c.sigla)}`)
                     }
-                    className="group relative flex aspect-square w-full flex-col overflow-hidden rounded-xl border-2 border-subtle bg-card p-2.5 text-center surface-card transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[var(--border-strong)] hover:shadow-md hover:shadow-black/5 dark:border-white/10 dark:hover:border-[var(--border-strong)] dark:hover:bg-secondary/35 dark:hover:shadow-black/25 sm:p-3"
+                    className={cn(
+                      "group relative flex w-full flex-col overflow-hidden rounded-xl border-2 border-subtle bg-card p-2.5 text-center surface-card transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[var(--border-strong)] hover:shadow-md hover:shadow-black/5 dark:border-white/10 dark:hover:border-[var(--border-strong)] dark:hover:bg-secondary/35 dark:hover:shadow-black/25 sm:p-3",
+                      /* Solo &lt; lg: celdas más legibles y logos visibles; desde lg igual que antes */
+                      "max-lg:aspect-auto max-lg:min-h-[6.75rem] max-lg:touch-manipulation",
+                      "lg:aspect-square lg:min-h-0",
+                    )}
                   >
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-foreground/[0.04] to-transparent opacity-0 transition-opacity duration-300 dark:group-hover:opacity-100" />
                     <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 px-0.5 pb-5">
                       <div
                         className={cn(
-                          "flex min-h-0 w-full flex-1 items-center justify-center rounded-md transition-all duration-300",
+                          "flex min-h-0 w-full flex-1 items-center justify-center rounded-md transition-all duration-300 max-lg:min-h-[4.25rem] lg:min-h-0",
                           needsReadablePlate &&
                             "px-1 py-0.5 bg-transparent shadow-[inset_0_0_0_1px_rgba(255,255,255,0)] group-hover:bg-white/90 group-hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)] dark:bg-transparent dark:group-hover:bg-white/95",
                           usesHoverBluePlate &&
@@ -523,6 +528,9 @@ export default function DashboardPage() {
                           alt=""
                           className={cn(
                             "max-h-[42%] w-auto max-w-[92%] object-contain transition-[filter,transform,opacity] duration-300 ease-out group-hover:scale-105",
+                            /* Pantallas chicas: altura mínima para que el logo no quede invisible (% sobre celdas muy bajas) */
+                            "max-lg:max-h-14 max-lg:min-h-10 sm:max-lg:max-h-16",
+                            "lg:min-h-0",
                             /* Color ~70% en reposo, 100% al hover (excepto casos dark SDC/APM/AMI abajo) */
                             !needsReadablePlate &&
                               !usesHoverBluePlate &&
