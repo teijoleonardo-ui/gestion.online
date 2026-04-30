@@ -87,10 +87,10 @@ export default function MisGestionesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-svh bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Mis Gestiones</h1>
             <p className="text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ export default function MisGestionesPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-dash py-dash">
         {/* Search & Filters */}
         <Card className="border-border bg-card">
           <CardContent className="p-4">

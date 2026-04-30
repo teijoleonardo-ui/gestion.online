@@ -379,10 +379,10 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-svh bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center justify-between px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center justify-between px-dash sm:h-16">
           <div>
             <h1 className="text-base font-semibold text-foreground">Inicio</h1>
             <p className="text-xs text-muted-foreground">Panel principal</p>
@@ -402,7 +402,7 @@ export default function DashboardPage() {
         </div>
       </header>
  
-      <div className="mx-auto max-w-7xl space-y-8 p-6">
+      <div className="mx-auto max-w-7xl space-y-6 px-dash py-dash md:space-y-8">
  
         {/* Bienvenida + Carrusel */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -477,20 +477,20 @@ export default function DashboardPage() {
  
         {/* Contratantes */}
         <section id="nuestros-contratantes" className="scroll-mt-24">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-base font-bold text-foreground">Nuestros Contratantes</h3>
               <p className="text-xs text-muted-foreground">
                 Hacé clic en el contratante que querés abonar.
               </p>
             </div>
-            <Badge variant="secondary" className="bg-secondary/50 text-muted-foreground">
+            <Badge variant="secondary" className="shrink-0 bg-secondary/50 text-muted-foreground">
               {contratantes.length} activos
             </Badge>
           </div>
  
           <div className="mx-auto w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl">
-            <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 xl:grid-cols-5">
               {contratantes.map((c) => {
                 const usesHoverBluePlate = c.sigla === "AMI";
                 const needsReadablePlate = c.sigla === "SDC" || c.sigla === "APM";

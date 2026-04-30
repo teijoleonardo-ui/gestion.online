@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -87,6 +87,14 @@ export function AppSidebar() {
     setHash(typeof window !== "undefined" ? window.location.hash : "");
   }, [pathname]);
 
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const apply = () => setCollapsed(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   useEffect(() => {
     let clearTimer: ReturnType<typeof setTimeout> | undefined;
     const onCartAdded = () => {
@@ -121,13 +129,14 @@ export function AppSidebar() {
   return (
     <TooltipProvider delayDuration={200}>
       <aside
+        suppressHydrationWarning
         className={cn(
-          "flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300",
+          "flex h-screen min-h-svh flex-col border-r border-sidebar-border bg-sidebar pl-[env(safe-area-inset-left,0px)] transition-all duration-300 motion-reduce:transition-none",
           collapsed ? "w-[68px]" : "w-[240px]"
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+        <div className="flex h-14 min-h-[3.5rem] shrink-0 items-center justify-between border-b border-sidebar-border px-3 sm:h-16 sm:px-4">
           {!collapsed && (
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -140,7 +149,7 @@ export function AppSidebar() {
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="h-8 w-8 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="h-9 w-9 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:h-8 lg:w-8"
           >
             {collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
@@ -167,7 +176,7 @@ export function AppSidebar() {
             const isCarrito = item.url === "/dashboard/carrito";
 
             const itemClassName = cn(
-              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300",
+              "relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300",
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
@@ -254,7 +263,7 @@ export function AppSidebar() {
         </nav>
 
         {/* Bottom section */}
-        <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-sidebar-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
           {/* Configuración */}
           {(() => {
             const item = {
@@ -267,7 +276,7 @@ export function AppSidebar() {
               <Link
                 href={item.url}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                  "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
                   isActive
                     ? "bg-sidebar-accent text-sidebar-foreground"
                     : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -300,7 +309,7 @@ export function AppSidebar() {
                 <TooltipTrigger asChild>
                   <Link
                     href="/"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive/80 transition-all hover:bg-destructive/10 hover:text-destructive"
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive/80 transition-all hover:bg-destructive/10 hover:text-destructive"
                   >
                     <LogOut className="h-4 w-4 shrink-0" />
                   </Link>
@@ -312,7 +321,7 @@ export function AppSidebar() {
             ) : (
               <Link
                 href="/"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive/80 transition-all hover:bg-destructive/10 hover:text-destructive"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive/80 transition-all hover:bg-destructive/10 hover:text-destructive"
               >
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span>Cerrar sesión</span>
@@ -332,7 +341,7 @@ function HelpDialog({ collapsed }: { collapsed: boolean }) {
       type="button"
       aria-label="Ayuda"
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+        "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
         "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
       )}
     >

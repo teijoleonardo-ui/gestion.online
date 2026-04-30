@@ -15,11 +15,11 @@ export function DashboardMain({ children }: { children: React.ReactNode }) {
   return (
     <main
       className={cn(
-        "min-h-0 min-w-0 flex-1 bg-background",
+        "min-h-0 min-w-0 flex-1 overflow-x-hidden bg-background",
         isRetenciones
           ? "flex h-full flex-col overflow-hidden"
           : isCarrito
-            ? "overflow-x-hidden overflow-y-auto"
+            ? "overflow-y-auto"
             : "overflow-y-auto",
       )}
     >

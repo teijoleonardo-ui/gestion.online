@@ -271,7 +271,7 @@ export default function RetencionesPage() {
     <div className="flex h-full min-h-0 flex-col bg-background">
       {/* Scroll en esta columna (no se recorta el comprobante ni el formulario). */}
       <header className="z-10 shrink-0 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Retenciones</h1>
             <p className="text-sm text-muted-foreground">
@@ -282,7 +282,7 @@ export default function RetencionesPage() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-dash pt-dash pb-dash">
         {/* ── Hero ── */}
         <Card id="retenciones-carga" className="gap-0 border-border bg-card py-0">
           <CardContent className="px-4 py-2 sm:px-4 sm:py-2.5">

@@ -578,7 +578,7 @@ export default function CarritoPage() {
 
   if (!cartHydrated) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-3 bg-background px-6">
+      <div className="flex min-h-svh w-full flex-col items-center justify-center gap-3 bg-background px-dash">
         <Loader2 className="h-9 w-9 animate-spin text-muted-foreground" aria-hidden />
         <p className="text-sm text-muted-foreground">Cargando carrito…</p>
       </div>
@@ -593,7 +593,7 @@ export default function CarritoPage() {
       )}
     >
       {carritoVacio ? (
-        <div className="flex h-full min-h-[70vh] flex-col items-center justify-center gap-6 bg-background p-10">
+        <div className="flex h-full min-h-[70vh] flex-col items-center justify-center gap-6 bg-background px-dash py-10 sm:py-12">
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-secondary">
             <ShoppingCart className="h-12 w-12 text-muted-foreground" />
           </div>
@@ -624,7 +624,7 @@ export default function CarritoPage() {
             <div
               role="status"
               aria-live="polite"
-              className="flex shrink-0 items-start gap-3 border-b border-emerald-200/80 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/35 dark:text-emerald-50 sm:items-center sm:justify-center sm:px-6 sm:text-center"
+              className="flex shrink-0 items-start gap-3 border-b border-emerald-200/80 bg-emerald-50 px-dash py-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/35 dark:text-emerald-50 sm:items-center sm:justify-center sm:text-center"
             >
               <CheckCircle2
                 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400 sm:mt-0"
@@ -640,7 +640,7 @@ export default function CarritoPage() {
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-2",
-                checkoutSigla ? "h-11 px-1.5 py-1 sm:px-3" : "h-16 gap-3 px-6 py-0",
+                checkoutSigla ? "h-11 px-1.5 py-1 sm:px-3" : "h-14 min-h-[3.5rem] gap-3 px-dash py-0 sm:h-16",
               )}
             >
               <div className="min-w-0">

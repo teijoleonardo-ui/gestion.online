@@ -304,11 +304,11 @@ export function EstadosYBusqueda() {
           />
  
           {/* Panel */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:items-center sm:p-4 md:p-6">
             <div
               className={cn(
                 "flex w-full max-w-2xl flex-col rounded-2xl border bg-card shadow-2xl",
-                "max-h-[80vh]",
+                "max-h-[min(85dvh,calc(100svh-2rem))] sm:max-h-[min(88vh,calc(100dvh-3rem))]",
                 cfgModal.modalBorder,
               )}
               role="dialog"

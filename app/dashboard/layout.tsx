@@ -7,7 +7,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-svh min-h-[100dvh] overflow-hidden pt-[env(safe-area-inset-top,0px)]">
       <AppSidebar />
       <DashboardMain>{children}</DashboardMain>
     </div>

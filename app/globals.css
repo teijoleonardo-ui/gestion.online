@@ -79,6 +79,13 @@
   --teal-muted: oklch(0.865 0.075 200);
   --teal-text: oklch(0.285 0.12 200);
   --teal-border: oklch(0.46 0.13 200 / 0.42);
+
+  /**
+   * Dashboard / vistas full-bleed: gutters fluidos + base para safe-area
+   * (activo con viewport-fit=cover en app/layout).
+   */
+  --dash-gutter-x: clamp(0.875rem, 2.5vw + 0.25rem, 1.5rem);
+  --dash-section-y: clamp(1rem, 2vw + 0.5rem, 1.5rem);
 }
 
 .dark {
@@ -308,6 +315,25 @@
       filter 280ms cubic-bezier(0.16, 1, 0.3, 1),
       background-color 280ms cubic-bezier(0.16, 1, 0.3, 1),
       border-color 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /** Contenido principal: respeta notch / home indicator sin depender solo de px-6 */
+  .px-dash {
+    padding-left: max(var(--dash-gutter-x), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--dash-gutter-x), env(safe-area-inset-right, 0px));
+  }
+
+  .py-dash {
+    padding-top: var(--dash-section-y);
+    padding-bottom: max(var(--dash-section-y), env(safe-area-inset-bottom, 0px));
+  }
+
+  .pt-dash {
+    padding-top: var(--dash-section-y);
+  }
+
+  .pb-dash {
+    padding-bottom: max(var(--dash-section-y), env(safe-area-inset-bottom, 0px));
   }
 
 }

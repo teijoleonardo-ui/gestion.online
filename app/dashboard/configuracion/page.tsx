@@ -124,10 +124,10 @@ export default function ConfiguracionPage() {
     !!confirm && !!next && confirm.length >= next.length && confirm !== next;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-svh bg-background">
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">
               Configuración
@@ -139,7 +139,7 @@ export default function ConfiguracionPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="mx-auto max-w-5xl space-y-6 px-dash py-dash">
         {/* ── Hero ── */}
         <Card className="border-border bg-card">
           <CardContent className="p-6">

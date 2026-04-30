@@ -208,10 +208,10 @@ function AgendasContent() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-svh bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Agendas</h1>
             <p className="text-sm text-muted-foreground">
@@ -221,7 +221,7 @@ function AgendasContent() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl space-y-6 p-6">
+      <div className="mx-auto max-w-4xl space-y-6 px-dash py-dash">
         {/* Hero + Tabs (como capturas) */}
         <Card className="border-border bg-card">
           <CardContent className="p-6">

@@ -78,9 +78,9 @@ export default function MisGestionesDetallePage() {
 
   if (!trx) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-svh bg-background">
         <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-          <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex h-14 min-h-[3.5rem] items-center justify-between px-dash sm:h-16">
             <div>
               <h1 className="text-lg font-semibold text-foreground">Detalle</h1>
               <p className="text-sm text-muted-foreground">Transacción no encontrada</p>
@@ -101,9 +101,9 @@ export default function MisGestionesDetallePage() {
   const EstadoIcon = style.icon;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-svh bg-background">
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-16 items-center justify-between px-6">
+        <div className="flex h-14 min-h-[3.5rem] items-center justify-between gap-2 px-dash sm:h-16">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Transacción
@@ -124,7 +124,7 @@ export default function MisGestionesDetallePage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl gap-6 p-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+      <div className="mx-auto max-w-6xl gap-6 px-dash py-dash lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         {/* Columna principal */}
         <div className="min-w-0 space-y-4">
           {/* Seguimiento + Boleta compactos, estilo dashboard */}
