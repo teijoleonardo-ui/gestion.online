@@ -1,29 +1,19 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-
-/**
- * Retenciones: scroll interno en la página (columnas).
- * Carrito: un solo scroll en <main> (barra nativa del navegador, sin contenedor extra).
- */
-export function DashboardMain({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isRetenciones = pathname.startsWith("/dashboard/retenciones");
-  const isCarrito = pathname.startsWith("/dashboard/carrito");
-
-  return (
-    <main
-      className={cn(
-        "min-h-0 min-w-0 flex-1 overflow-x-hidden bg-background",
-        isRetenciones
-          ? "flex h-full flex-col overflow-hidden"
-          : isCarrito
-            ? "overflow-y-auto"
-            : "overflow-y-auto",
-      )}
-    >
-      {children}
-    </main>
-  );
-}
+"use client";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * Un solo scroll en <main>: evita contenedores anidados que en algunos navegadores
+ * no reciben bien la rueda del mouse y mantienen el panel lateral fuera del flujo que scrollea.
+ */
+export function DashboardMain({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      className={cn(
+        "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain bg-background",
+      )}
+    >
+      {children}
+    </main>
+  );
+}

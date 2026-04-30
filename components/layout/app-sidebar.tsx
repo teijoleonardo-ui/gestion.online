@@ -131,7 +131,7 @@ export function AppSidebar() {
       <aside
         suppressHydrationWarning
         className={cn(
-          "flex h-screen min-h-svh flex-col border-r border-sidebar-border bg-sidebar pl-[env(safe-area-inset-left,0px)] transition-all duration-300 motion-reduce:transition-none",
+          "flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar pl-[env(safe-area-inset-left,0px)] transition-all duration-300 motion-reduce:transition-none",
           collapsed ? "w-[68px]" : "w-[240px]"
         )}
       >
@@ -156,7 +156,7 @@ export function AppSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3">
           {menuItems.map((item) => {
             const pathOnly = item.url.split("#")[0] ?? item.url;
             const isActive = (() => {

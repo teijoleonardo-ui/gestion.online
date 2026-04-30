@@ -336,7 +336,7 @@ export default function ConfiguracionPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     La contraseña debe tener al menos{" "}
-                    <span className="font-semibold text-emerald-400">
+                    <span className="font-semibold text-emerald-800 dark:text-emerald-400">
                       {MIN_PASSWORD_LENGTH} caracteres
                     </span>
                     .

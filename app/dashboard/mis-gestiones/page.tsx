@@ -2,7 +2,7 @@
 
 import { useState, type ElementType } from "react";
 import Link from "next/link";
-import { Search, Download, Clock, CheckCircle2, XCircle, Filter, ChevronRight } from "lucide-react";
+import { Search, Download, Clock, CheckCircle2, XCircle, Filter, ChevronRight, FileText, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { mockTransacciones } from "./data";
+
+/** Fechas mock en formato DD/MM/YYYY (ej. "10/04/2025"). */
+function parseTransaccionFecha(s: string): Date | null {
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]) - 1;
+  const year = Number(m[3]);
+  const d = new Date(year, month, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+  return d;
+}
+
+function startOfLocalDay(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** Valor de `<input type="date">` (YYYY-MM-DD). */
+function parseDateInputValue(s: string): Date | null {
+  if (!s.trim()) return null;
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]) - 1;
+  const day = Number(m[3]);
+  const d = new Date(year, month, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+  return d;
+}
 
 /** Igual criterio que retenciones (EstadosYBusqueda): borde teñido + hover con tinte del estado. */
 const estadoVisual: Record<
@@ -77,19 +107,32 @@ const estadoVisual: Record<
 export default function MisGestionesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [fechaFiltro, setFechaFiltro] = useState("");
 
   const filtered = mockTransacciones.filter((t) => {
     const matchesSearch =
       t.nro.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.bl.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.estado === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    let matchesDate = true;
+    if (fechaFiltro) {
+      const picked = parseDateInputValue(fechaFiltro);
+      const tx = parseTransaccionFecha(t.fecha);
+      if (picked && tx) {
+        matchesDate = startOfLocalDay(tx) === startOfLocalDay(picked);
+      } else {
+        matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   return (
     <div className="min-h-svh bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Mis Gestiones</h1>
@@ -101,32 +144,81 @@ export default function MisGestionesPage() {
       </header>
 
       <div className="mx-auto max-w-6xl space-y-6 px-dash py-dash">
+        <div className="flex w-full justify-start">
+          <Card id="mis-gestiones-intro" className="w-fit max-w-full gap-0 border-border bg-card py-0">
+            <CardContent className="px-6 py-6 sm:px-8 sm:py-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+                  <FileText className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div className="min-w-0 max-w-3xl space-y-2">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-bold leading-tight tracking-tight text-foreground sm:text-xl">
+                      Tus gestiones y comprobantes
+                    </h2>
+                    <p className="text-sm leading-snug text-muted-foreground">
+                      Buscá por número de transacción o BL y filtrá por estado para abrir el detalle de cada
+                      operación.
+                    </p>
+                  </div>
+                  <div className="flex gap-2.5 rounded-lg border border-border/70 bg-muted/30 px-4 py-3 dark:border-white/10 dark:bg-muted/20">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" aria-hidden />
+                    <p className="text-xs leading-snug text-muted-foreground sm:text-[13px] sm:leading-snug">
+                      Cuando un movimiento figure como confirmado, podés descargar los{" "}
+                      <span className="font-semibold text-foreground">comprobantes</span> desde la vista detalle.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Search & Filters */}
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+        <Card className="gap-0 border-border bg-card py-0">
+          <CardContent className="px-4 py-3 sm:px-5 sm:py-3">
+            <div className="flex flex-col gap-1.5 lg:flex-row lg:flex-wrap lg:items-end">
+              <div className="relative w-full min-w-0 max-w-full sm:max-w-[min(100%,22rem)] lg:flex-1 lg:max-w-md xl:max-w-lg">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por Nro. de Transacción o BL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-12 border border-transparent bg-secondary/50 pl-12 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  className="h-10 border border-transparent bg-secondary/50 pl-10 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-12 w-full sm:w-[180px] border border-transparent bg-secondary/50">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="Pagado">Pagado</SelectItem>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="En proceso">En proceso</SelectItem>
-                  <SelectItem value="Rechazado">Rechazado</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex w-full flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-end lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-end">
+                <div className="w-full sm:w-auto sm:min-w-[11rem] sm:max-w-[180px]">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-10 w-full border border-transparent bg-secondary/50">
+                      <Filter className="mr-2 h-4 w-4 shrink-0" />
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="Pagado">Pagado</SelectItem>
+                      <SelectItem value="Pendiente">Pendiente</SelectItem>
+                      <SelectItem value="En proceso">En proceso</SelectItem>
+                      <SelectItem value="Rechazado">Rechazado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid w-full min-w-0 gap-0.5 sm:w-auto sm:min-w-[10.5rem]">
+                  <Label
+                    htmlFor="mis-gestiones-fecha"
+                    className="text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground"
+                  >
+                    Fecha
+                  </Label>
+                  <Input
+                    id="mis-gestiones-fecha"
+                    type="date"
+                    value={fechaFiltro}
+                    onChange={(e) => setFechaFiltro(e.target.value)}
+                    className="h-10 border border-transparent bg-secondary/50 px-2 text-sm text-foreground focus-visible:ring-primary"
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -142,26 +234,28 @@ export default function MisGestionesPage() {
               <Card
                 key={status}
                 className={cn(
-                  "cursor-pointer border transition-colors duration-200",
+                  "cursor-pointer gap-0 border py-0 transition-colors duration-200",
                   filtered ? cn(cfg.filterBg, cfg.filterBorder) : cn("bg-card", cfg.cardBorder),
                   cfg.hoverBg,
                   cfg.hoverBorder,
                 )}
                 onClick={() => setStatusFilter(filtered ? "all" : status)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{status}</p>
-                      <p className="text-2xl font-bold text-foreground">{count}</p>
+                <CardContent className="px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="text-sm leading-none text-muted-foreground">{status}</p>
+                      <p className="text-2xl font-bold leading-none tracking-tight text-foreground">
+                        {count}
+                      </p>
                     </div>
                     <div
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-lg",
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                         cfg.iconWrap,
                       )}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4" />
                     </div>
                   </div>
                 </CardContent>
@@ -219,10 +313,10 @@ export default function MisGestionesPage() {
                             <Download className="mr-2 h-4 w-4" />
                             Descargar boleta
                           </Button>
-                          <Button asChild variant="secondary" size="sm" className="h-9 bg-secondary/50">
+                          <Button asChild variant="default" className="h-9 gap-2 font-semibold shadow-sm">
                             <Link href={`/dashboard/mis-gestiones/${t.id}`}>
                               Ver detalle
-                              <ChevronRight className="ml-1.5 h-4 w-4" />
+                              <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
                             </Link>
                           </Button>
                         </div>
