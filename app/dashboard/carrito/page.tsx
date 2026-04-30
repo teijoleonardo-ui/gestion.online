@@ -636,7 +636,7 @@ export default function CarritoPage() {
               </span>
             </div>
           )}
-          <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-background/90 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 shrink-0 border-b border-border bg-background backdrop-blur-xl">
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-2",

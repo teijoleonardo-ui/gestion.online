@@ -126,7 +126,7 @@ export default function ConfiguracionPage() {
   return (
     <div className="min-h-svh bg-background">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background backdrop-blur-xl">
         <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">

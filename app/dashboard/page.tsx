@@ -381,7 +381,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-svh bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background backdrop-blur-xl">
         <div className="flex h-14 min-h-[3.5rem] items-center justify-between px-dash sm:h-16">
           <div>
             <h1 className="text-base font-semibold text-foreground">Inicio</h1>
@@ -663,7 +663,7 @@ export default function DashboardPage() {
                         <a
                           href={mp.instructive.href}
                           download={mp.instructive.download}
-                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-secondary/60 px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary/80"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-border bg-secondary/55 px-4 text-xs font-semibold text-foreground shadow-xs transition-[background-color,border-color,box-shadow] hover:border-border hover:bg-secondary/80 hover:shadow-sm dark:border-white/12 dark:hover:border-white/18"
                         >
                           <Download className="h-3.5 w-3.5" />
                           {mp.instructive.label}

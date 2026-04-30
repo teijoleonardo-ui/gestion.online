@@ -79,7 +79,7 @@ export default function MisGestionesDetallePage() {
   if (!trx) {
     return (
       <div className="min-h-svh bg-background">
-        <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-50 border-b border-border bg-background backdrop-blur-xl">
           <div className="flex h-14 min-h-[3.5rem] items-center justify-between px-dash sm:h-16">
             <div>
               <h1 className="text-lg font-semibold text-foreground">Detalle</h1>
@@ -102,7 +102,7 @@ export default function MisGestionesDetallePage() {
 
   return (
     <div className="min-h-svh bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background backdrop-blur-xl">
         <div className="flex h-14 min-h-[3.5rem] items-center justify-between gap-2 px-dash sm:h-16">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

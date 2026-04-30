@@ -132,7 +132,7 @@ export default function MisGestionesPage() {
   return (
     <div className="min-h-svh bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-50 border-b border-border bg-background backdrop-blur-xl">
         <div className="flex h-14 min-h-[3.5rem] items-center px-dash sm:h-16">
           <div>
             <h1 className="text-lg font-semibold text-foreground">Mis Gestiones</h1>
@@ -164,7 +164,7 @@ export default function MisGestionesPage() {
                   <div className="flex gap-2.5 rounded-lg border border-border/70 bg-muted/30 px-4 py-3 dark:border-white/10 dark:bg-muted/20">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" aria-hidden />
                     <p className="text-xs leading-snug text-muted-foreground sm:text-[13px] sm:leading-snug">
-                      Cuando un movimiento figure como confirmado, podés descargar los{" "}
+                      Cuando un movimiento figure como &quot;Pagado&quot;, podés descargar los{" "}
                       <span className="font-semibold text-foreground">comprobantes</span> desde la vista detalle.
                     </p>
                   </div>
